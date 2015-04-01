@@ -1,0 +1,243 @@
+#===================================================
+# 2bRAD denovo:  Analysis
+(using only thinned filtered SNP-based dataset)
+
+#-----------------------
+# Computing Fst between pops
+
+# create lists of Orpheus (starting with O) and Keppels (K) samples, names O.pop and K.pop
+# based on names of .trim files that are now in your rad directory, using ls and perl -pe commands
+ls K*.fq | perl -pe 's/\..+//' >K.pop
+ls O*.fq | perl -pe 's/\..+//' >O.pop
+
+# SNPs:
+vcftools --vcf denovo.filt.recode.vcf --weir-fst-pop K.pop --weir-fst-pop O.pop
+# Weir and Cockerham weighted Fst estimate: 0.015206
+
+# haplotypes:
+vcftools --vcf denovo.vhap.filt.recode.vcf --weir-fst-pop K.pop --weir-fst-pop O.pop
+# Weir and Cockerham weighted Fst estimate: 0.013947
+
+#---------------
+# getting the data ready 
+
+# need PGDspider - the format-converting software!
+# install PDGspider on your laptop: 
+# http://www.cmpg.unibe.ch/software/PGDSpider/#Download_and_Installation_Instructions  
+
+# install PGDspider on lonestar:
+cd ~/bin
+wget http://www.cmpg.unibe.ch/software/PGDSpider/PGDSpider_2.0.7.1.zip
+unzip PGDSpider_2.0.7.1.zip
+cd -
+
+# creating populations table:
+cat O.pop K.pop  | perl -pe 's/((.).+)/$1\t$2/' >OK.pops
+
+# now, have to launch PDGspider on your laptop and go to create/edit SPID files;
+# create a configuration file for format conversion
+# or, for this particular case, just copy-paste the following 
+# into a new file vcf2fastStructure.spid (use nano):
+###########
+# VCF Parser questions
+PARSER_FORMAT=VCF
+
+# Do you want to include a file with population definitions?
+VCF_PARSER_POP_QUESTION=true
+# Only input following regions (refSeqName:start:end, multiple regions: whitespace separated):
+VCF_PARSER_REGION_QUESTION=
+# What is the ploidy of the data?
+VCF_PARSER_PLOIDY_QUESTION=DIPLOID
+# Only output following individuals (ind1, ind2, ind4, ...):
+VCF_PARSER_IND_QUESTION=
+# Output genotypes as missing if the read depth of a position for the sample is below:
+VCF_PARSER_READ_QUESTION=
+# Take most likely genotype if "PL" or "GL" is given in the genotype field?
+VCF_PARSER_PL_QUESTION=false
+# Do you want to exclude loci with only missing data?
+VCF_PARSER_EXC_MISSING_LOCI_QUESTION=true
+# Select population definition file:
+VCF_PARSER_POP_FILE_QUESTION=./OK.pops
+# Only output SNPs with a phred-scaled quality of at least:
+VCF_PARSER_QUAL_QUESTION=
+# Do you want to include non-polymorphic SNPs?
+VCF_PARSER_MONOMORPHIC_QUESTION=false
+# Output genotypes as missing if the phred-scale genotype quality is below:
+VCF_PARSER_GTQUAL_QUESTION=20
+
+# STRUCTURE Writer questions
+WRITER_FORMAT=STRUCTURE
+
+# Save more specific fastSTRUCTURE format?
+STRUCTURE_WRITER_FAST_FORMAT_QUESTION=true
+# Specify the locus/locus combination you want to write to the STRUCTURE file:
+STRUCTURE_WRITER_LOCUS_COMBINATION_QUESTION=
+# Specify which data type should be included in the STRUCTURE file  (STRUCTURE can only analyze one data type per file):
+STRUCTURE_WRITER_DATA_TYPE_QUESTION=SNP
+# Do you want to include inter-marker distances?
+STRUCTURE_WRITER_LOCI_DISTANCE_QUESTION=false
+############
+
+
+#And this - into vcf2bayescan.spid :
+############
+# VCF Parser questions
+PARSER_FORMAT=VCF
+
+# Do you want to include a file with population definitions?
+VCF_PARSER_POP_QUESTION=true
+# Only input following regions (refSeqName:start:end, multiple regions: whitespace separated):
+VCF_PARSER_REGION_QUESTION=
+# What is the ploidy of the data?
+VCF_PARSER_PLOIDY_QUESTION=DIPLOID
+# Only output following individuals (ind1, ind2, ind4, ...):
+VCF_PARSER_IND_QUESTION=
+# Output genotypes as missing if the read depth of a position for the sample is below:
+VCF_PARSER_READ_QUESTION=
+# Take most likely genotype if "PL" or "GL" is given in the genotype field?
+VCF_PARSER_PL_QUESTION=true
+# Do you want to exclude loci with only missing data?
+VCF_PARSER_EXC_MISSING_LOCI_QUESTION=false
+# Select population definition file:
+VCF_PARSER_POP_FILE_QUESTION=./OK.pops
+# Only output SNPs with a phred-scaled quality of at least:
+VCF_PARSER_QUAL_QUESTION=
+# Do you want to include non-polymorphic SNPs?
+VCF_PARSER_MONOMORPHIC_QUESTION=false
+# Output genotypes as missing if the phred-scale genotype quality is below:
+VCF_PARSER_GTQUAL_QUESTION=
+
+# GESTE / BayeScan Writer questions
+WRITER_FORMAT=GESTE_BAYE_SCAN
+
+# Specify which data type should be included in the GESTE / BayeScan file  (GESTE / BayeScan can only analyze one data type per file):
+GESTE_BAYE_SCAN_WRITER_DATA_TYPE_QUESTION=SNP
+############
+
+# converting thinned biallelic vcf to bayescan format
+java -Xmx1024m -Xms512m -jar ~/bin/PGDSpider_2.0.7.1/PGDSpider2-cli.jar -inputfile denovo.filt.recode.vcf -outputfile snp.bayescan -spid vcf2bayescan.spid 
+
+#---------------
+# BayeScan: searching for Fst outliers; technically, we need to remove them before running STRUCTURE
+
+# Download and install BayeScan 
+cd ~/bin
+wget http://cmpg.unibe.ch/software/BayeScan/files/BayeScan2.1.zip
+unzip BayeScan2.1.zip
+cp BayeScan2.1/binaries/BayeScan2.1_linux64bits bayescan
+chmod +x bayescan
+rm -r BayeScan*
+
+# launching bayescan
+echo 'bayescan snp.bayescan -threads=96' >bs
+launcher_creator.py -j bs -n bs -l bsl
+cat bsl | perl -pe 's/12way 12/12way 96/' | perl -pe 's/h_rt=1/h_rt=24/' |  perl -pe 's/development/normal/' >bsll
+qsub bsll
+
+# this job takes a few hours
+
+# once its done, use removeBayescanOutliers.pl to remove potentially selected markers 
+# (qvalue <0.1 by default)
+# to create a proper vcf dataset for fastStructure:
+removeBayescanOutliers.pl bayescan=snp.baye_fst.txt vcf=denovo.filt.recode.vcf >noout.vcf 2>rb
+
+# also use bayescan_plots.R to explore the results (on your laptop; will need to scp
+# snp.baye_fst.txt 
+
+# in snp.baye_fst.txt, each line corresponds to a SNP
+# how many SNPs have a qvalue less than 0.1 (and therefore are possibly under selection?) 
+awk '$4<0.1' snp.baye_fst.txt | wc -l
+
+#-------------
+# ADMIXTURE
+#-------------
+
+# installing ADMIXTURE
+cd ~/bin/
+wget https://www.genetics.ucla.edu/software/admixture/binaries/admixture_linux-1.23.tar.gz --no-check-certificate
+tar vxf admixture_linux-1.23.tar.gz 
+mv admixture_linux-1.23/admixture .
+cd -
+
+# installing plink 1.09:
+cd ~/bin
+wget https://www.cog-genomics.org/static/bin/plink140918/plink_linux_x86_64.zip
+unzip plink_linux_x86_64.zip
+cd-
+
+# creating a dataset with fake "chr" chromosome designations
+cat noout.vcf | perl -pe 's/locus(\d)(\d+)\t\d+/chr$1\t$2/' >nooutchrom.vcf
+cat denovo.filt.recode.vcf | perl -pe 's/locus(\d)(\d+)\t\d+/chr$1\t$2/' >nooutchrom.vcf
+
+# reformatting VCF into plink binary BED format
+plink --vcf nooutchrom.vcf --make-bed --out denov
+
+# cross-validation to select K (bash script)
+for K in 1 2 3 4 5 6; \
+do admixture --cv denov.bed $K | tee log${K}.out; done
+
+grep -h CV log*.out
+
+# listing individuals from vcf file
+grep "#CHROM" nooutchrom.vcf | perl -pe 's/\t/\n/g' | grep [0-9] > inds.list
+
+# scp the *.Q file to laptop, plot it in R:
+tbl=read.table("denov.5.Q")
+barplot(t(as.matrix(tbl)), col=rainbow(5),xlab="Individual #", ylab="Ancestry", border=NA)
+
+# or, more fancy, use admixturePlotting.R
+
+
+#------------------------
+# Fast STRUCTURE (for strong pop structures. Don't run unless ADMIXTURE fails for some reason)
+#------------------------
+
+# installing fastStructure (a bit involved... I had to request TACC support to get it going)
+cd ~/bin
+wget --no-check-certificate https://github.com/rajanil/fastStructure/archive/master.tar.gz
+mv master master.tgz
+tar vxf master.tgz
+cd fastStructure-master/
+module load gsl
+cd vars
+python setup.py build_ext --inplace --include-dirs="${TACC_GSL_INC}:/opt/apps/python/epd/7.3.2/lib/python2.7/site-packages/numpy/core/include" --library-dirs="${TACC_GSL_LIB}"
+cd ..
+python setup.py build_ext --inplace
+
+
+# converting thinned biallelic no-outliers vcf to fastStructure format
+java -Xmx1024m -Xms512m -jar ~/bin/PGDSpider_2.0.7.1/PGDSpider2-cli.jar -inputfile noout.vcf -outputfile biall.noout.str -spid vcf2fastStructure.spid 
+
+
+# running fastStructure:
+# creating commands file for K tests:
+cd $SCRATCH/RAD
+nano fsf
+# paste:
+python ~/bin/fastStructure-master/structure.py --input=biall.noout --full --output=denovos -K 1 --format=str --prior=logistic
+python ~/bin/fastStructure-master/structure.py --input=biall.noout --full --output=denovos -K 2 --format=str --prior=logistic
+python ~/bin/fastStructure-master/structure.py --input=biall.noout --full --output=denovos -K 3 --format=str --prior=logistic
+python ~/bin/fastStructure-master/structure.py --input=biall.noout --full --output=denovos -K 4 --format=str --prior=logistic
+python ~/bin/fastStructure-master/structure.py --input=biall.noout --full --output=denovos -K 5 --format=str --prior=logistic
+# Ctl-O, enter, Ctl-X
+
+# launching job:
+launcher_creator.py -j fsf -n fsf -l fsj -q normal -t 6:00:00
+qsub fsj
+
+# Choice of K :
+python ~/bin/fastStructure-master/chooseK.py --input denovos
+Model complexity that maximizes marginal likelihood = 5
+Model components used to explain structure in data = 1
+
+# running 100 replicates of fastStructure
+export FAST_STRUCTURE_DIR=~/bin/fastStructure-master
+runRepStructure.pl --input biall.noout --output dnv -K 4 --format str --prior logistic --full > rep2
+launcher_creator.py -j rep2 -n r2 -l r2j
+qsub r2j
+
+# scp all the biall.noout.str, dnv*.meanQ and dnv*.log files back to your laptop
+# use fastStructurePlotting.R to plot 
+
+
+
