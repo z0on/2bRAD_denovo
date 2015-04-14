@@ -77,7 +77,7 @@ mono=toss         whether to keep non-polymorphic loci. Specify mono=keep to kee
 mindp=3           minimum depth to call a homozygote. 
 
 
-Mikhail Matz, July 2013 - October 2014
+Mikhail Matz, July 2013 - April 2015
 matz\@utexas.edu
 
 Example:  haplocall_denovo.pl cdh_alltags.ul
@@ -234,7 +234,8 @@ $cutcounts	with $cut or more reads
 $indcounts	in $numind or more samples
 $strbcounts	pass strand bias cutoff $strb";
 
-# measuring alleles' quality - average fraction of tags in an individual *100
+# measuring alleles' quality - 
+# average fraction of tags in an individual containing the tag, *100
 # excluding alleles with quality lower than $minQ 
 
 my %goodmapQ={};
@@ -563,7 +564,7 @@ foreach $r (@goodrefs){
 		}
 #print "\t\tcoord $coord skew $skew; rdep $rdep; freqs ",join(':',@freqs),"\n";
 		$tagg=$r;
-		print {TAB} "$chrom\t1\t.\t",shift @bases,"\t",join(",",@bases),"\t$skew\t.\tSB=$sbr;AB=$skew;NS=$nsam;TP=",$sn+1,";DP=$rdep;AF=",join(":",@freqs),"\tGT:GQ:PS:AD:DP";
+		print {TAB} "$chrom\t",$sn+1,"\t.\t",shift @bases,"\t",join(",",@bases),"\t$skew\t.\tSB=$sbr;AB=$skew;NS=$nsam;TP=",$sn+1,";DP=$rdep;AF=",join(":",@freqs),"\tGT:GQ:PS:AD:DP";
 		foreach $s (@samples){
 #print "\t\t\tSAMPLE $s, genotype $gt1{$s}|$gt2{$s} isphase? $isphase ($phase)\n";			
 			if (${$gta{$s}}[0]) {
@@ -716,7 +717,7 @@ foreach $r (sort {$a <=> $b} @goodrefs){
 	foreach $all (keys %freq ){
 		next if ($all=~/HASH/);
 		$freq{$all}=$freq{$all}/(2*$nsam);
-		$freq{$all}=sprintf("%.2f",$freq{$all});
+		$freq{$all}=sprintf("%.3f",$freq{$all});
 		push @freqs,$freq{$all} ;
 	}
 	if ($#ordmapt==0) { 
