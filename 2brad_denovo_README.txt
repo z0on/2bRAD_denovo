@@ -232,12 +232,12 @@ filterStats.pl vcf=alltags.ul_Variants_count10_ab10_sb10_clip0.vcf
 
 # if you did replicates-based recalibration and your best gain was observed at 20:
 # also, minimum genotype quality we want is Q15, biallelic only, present in 80% of samples:	
-vcftools --vcf alltags.ul_Variants_count10_ab10_sb10_clip0.vcf --minQ 20 --minGQ 15 --min-alleles 2 --max-alleles 2 --max-missing 0.75 --recode --recode-INFO-all --out denovo.filt0
+vcftools --vcf denovo.recal.vcf --minQ 20 --minGQ 15 --min-alleles 2 --max-alleles 2 --max-missing 0.75 --recode --recode-INFO-all --out denovo.filt0
 
 # if you did NOT do recalibration and want (recommended) to keep loci within best 80% for each filter (AB and meanDP):
 # consult the output from filterStats.pl (above) to see which filter values correspond to 80%
 # in vcftools, AB would correspond to --minQ, meanDP range is set by --min-meanDP and --max-meanDP:
-vcftools --vcf alltags.ul_Variants_count10_ab10_sb10_clip0.vcf --minQ 29 --min-meanDP 23 --max-meanDP 102 --recode --recode-INFO-all --out denovo.filt0
+vcftools --vcf cdh_alltags.ul_Variants_count10_ab10_sb10_clip0.vcf --minQ 29 --min-meanDP 23 --max-meanDP 102 --recode --recode-INFO-all --out denovo.filt0
 # After filtering, kept 132 out of 132 Individuals
 # After filtering, kept 26023 out of a possible 76865 Sites
 

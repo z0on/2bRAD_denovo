@@ -50,7 +50,7 @@ clip=0            number of bases to clip off the ends of reads
 
 ----- Allele filters -----
 
-aobs=10           min number of times an allele must be observed across all samples. 
+aobs=5           min number of times an allele must be observed across all samples. 
 
 strbias=10        strand bias cutoff: minimal ratio between reverse and 
                   direct reads, x100. 0 would mean no filtering.
@@ -86,7 +86,7 @@ Example:  haplocall_denovo.pl cdh_alltags.ul
 
 my $gmap=shift or die $usage;
 
-my $cut=10;
+my $cut=5;
 my $strb=10;
 my $indfrac=0.25;
 my $frachetero=0.5; 
