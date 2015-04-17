@@ -1,6 +1,8 @@
 Whole genome de novo genotyping with 2bRAD
 ------------------------------------------
 
+Mikhail Matz, matz@utexas.edu
+
 2bRAD has been described in Wang et al 2012 
 http://www.nature.com/nmeth/journal/v9/n8/abs/nmeth.2023.html 
 
