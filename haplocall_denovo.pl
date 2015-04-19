@@ -7,10 +7,10 @@ haplocall_denovo.pl :
 Calls genotypes (as population-wide RAD-tag haplotypes) in de novo 2bRAD data.
 
 Outputs two files in VCF v.4 format: 
-    \"Vhap\": whole RAD tags recored as alernative alleles (for coalescent analysis
-            and methods that take advantage of multi-allelic markers);
+    \"Vhap\": whole RAD tags recoded as alternative alleles (for coalescent analysis
+              and methods that take advantage of multi-allelic markers);
 \"Variants\": RAD tags broken into individual SNPs, within-tag phase recorded 
-            (for methods requiring biallelic markers).
+              (for methods requiring biallelic markers).
 
 The QUAL field in VCF files is allele bias, the average fraction of minor allele 
 counts in a heterozygote. Ideally this should be close to 50, more if the allele is

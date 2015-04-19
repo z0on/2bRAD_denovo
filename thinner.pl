@@ -16,6 +16,7 @@ Output:  thinned VCF, printed to STDOUT
 Example: thinner.pl vcf=denovo.recal.vcf > thinDenov.vcf
 
 NOTE: do not thin your variants if you want to calculate Tajima's D!
+Also, to select variants for dadi analysis, use --thin option in vcftools instead.
 
 ";
 
@@ -42,7 +43,7 @@ while (<VCF>) {
 	$chrom=$dats[0];
 	$pos=$dats[1];
 	$info=$dats[7];
-	if ($info=~/AF=(\S*?)(;|$)/) { $af=$1; } else { warn "no AF:\n@dats\n" and next;}
+	if ($info=~/AF=(\S*?);/) { $af=$1; } else { warn "no AF:\n@dats\n" and next;}
 	if ($af>0.5) { $af=1-$af; }
 	if ($pos-$pos0 <=$inter and ($chrom eq $chrom0)){
 		if ($af >$maxaf) {
