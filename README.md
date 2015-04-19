@@ -10,7 +10,7 @@ http://www.nature.com/nmeth/journal/v9/n8/abs/nmeth.2023.html
 
 Unique features of 2bRAD bioinformatics are removal of PCR duplicates based on degenerate tag (allowing for 128-fold dynamic range of sequencing depth per allele), as well filtering and quality assessment based on genotyping replicates.
 
-de novo 2bRAD pipeline is similar in ideology to STACKS, but takes advantage of the fact that 2bRAD sequences both strands. The genotype caller (haplocall_denovo.pl) emits VCF 4.1 formatted files (both for whole tags and individual SNPs). This allows for easy interface with downstream analysis software, most importantly vcftools that can be used for calculating Fst, nucleotide diversity, Tajoma's D, heterozygosity, and linkage disequilibrium. 
+de novo 2bRAD pipeline is similar in ideology to STACKS, but takes advantage of the fact that 2bRAD sequences both strands. The genotype caller (haplocall_denovo.pl) emits VCF 4.1 formatted files (both for whole tags and individual SNPs). This allows for easy interface with downstream analysis software, most importantly vcftools that can be used for calculating Fst, nucleotide diversity, Tajima's D, heterozygosity, and linkage disequilibrium. 
 
 This repository contains the lab protocol for sample preparation, as well as scripts and walkthrough (2bRAD_denovo_README.txt) for:
 - trimming and quality filtering;
