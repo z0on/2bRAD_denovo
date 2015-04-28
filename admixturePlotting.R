@@ -38,7 +38,7 @@ library(RColorBrewer)
 # assembling the input table
 inName="admix.4.Q" # name of the input file to plot, output of ADMIXTURE run
 npops=as.numeric(strsplit(inName,".",fixed=T)[[1]][length(strsplit(inName,".",fixed=T)[[1]])-1])
-inds2pops="inds2pops.tab" # two-column tab-delimited file listing sample names and their population assignemnts, in the order corresponding to the ADMIXTURE output
+inds2pops="inds2pops.tab" # two-column tab-delimited file listing sample names and their population assignemnts, in the order corresponding to the ADMIXTURE output. The columns must be named "ind" and "pop".
 
 tbl=read.table(inName)
 i2p=read.table(inds2pops,header=T)

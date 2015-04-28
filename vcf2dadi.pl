@@ -5,6 +5,9 @@ use Bio::SeqIO;
 
 my $usage="
 
+Converts VCF format to dadi data format
+(requires bioperl)
+
 Usage: perl vcf2dadi.pl <genome file> <vcf file> <list file>
 
 Genome file is in fasta format;
