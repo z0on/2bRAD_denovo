@@ -109,7 +109,7 @@ foreach $gmap (@ins) {
 		}
 	}
 }
-warn "ALL allins: @allins\n";
+#warn "ALL allins: @allins\n";
 $now=localtime;
 warn "processing: $now\n";
 
