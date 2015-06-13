@@ -51,8 +51,10 @@ my $now;
 my %dstring={};
 my @rest;
 
-@ins=sort @ins;
-@allins=@ins;
+my @ins=sort @ins;
+my @allins=();
+
+my $frst=1;
 
 $reff=shift(@ins);
 open INP, $reff or die "cannot open first file $reff\n"; 
@@ -64,18 +66,27 @@ while (<INP>) {
 	chop;
 	($tag,@rest)=split("\t",$_);
 	@{$dstring{$tag}}=@rest;
+	if ($frst) {
+		push @allins,$rest[2];
+		$frst=0;
+	}
 }
 
 foreach $gmap (@ins) {
-warn "\tfile $gmap\n";
-$now=localtime;
-warn "reading: $now\n";
+	warn "\tfile $gmap\n";
+	$frst=1;
+	$now=localtime;
+	warn "reading: $now\n";
 	open INP, $gmap or die "cannot open file $gmap\n";
 	while (<INP>) {
 		next if ($_=~/^seq/);
 		chop;
 		my $line=$_;
 		($tag,$tot2,$rc2,$ind2,$counts2)=split("\t",$line);
+		if ($frst) {
+			push @allins,$ind2;
+			$frst=0;
+		}
 		if (!$dstring{$tag}) {
 			my $rc=rcom($tag);			
 			if ($dstring{$rc}){ 
@@ -98,7 +109,7 @@ warn "reading: $now\n";
 		}
 	}
 }
-
+warn "ALL allins: @allins\n";
 $now=localtime;
 warn "processing: $now\n";
 
@@ -112,6 +123,8 @@ my @seqs=keys %dstring;
 foreach $s (@allins){
 	$s=~s/\..+//;
 }
+
+#@allins
 
 open FAS, ">mergedUniqTags.fasta" or die "cannot create file mergedUniqTags.fasta";
 print "tag\tseq\tcount\trevcom\t",join("\t",@allins),"\n";
