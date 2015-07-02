@@ -39,7 +39,7 @@ while (<INP>) {
 	@alts=split(",",$rest[4]);
 	$info=$rest[7];
 	if ($info=~/AF=(\S+)$|AF=(\S+);/) { @afs=split(":",$1);}
-	print ">",$locus,"_",$pos,"_maj AF=",$afs[0],"\n$major\n";
+	print ">",$locus," ",$pos,"_maj AF=",$afs[0],"\n$major\n";
 	if ($altalleles==1){
 		next if ($alts[0] eq ".");
 		for(my $i=0;$i<=$#alts;$i++){
