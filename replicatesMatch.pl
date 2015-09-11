@@ -2,7 +2,7 @@
 
 my $usage="
 
-replicatesMatch.pl : (version 0.4, September 10 2015)
+replicatesMatch.pl : (version 0.5, September 11 2015)
 
 Selects polymorphic variants that have identical genotypes among replicates.  
 
@@ -24,14 +24,13 @@ missing=[float]  allowed fraction of missing genotypes, default 0.25
 allAlts=[1|0]    output all SNPs showing non-reference alleles (not necessarily
                  polymorphic among genotyped samples). Default 0
                  
-hetMatch=1       minimal number of matching heterozygotes. Ignored if allAlts=1.
+hetMatch=2       minimal number of matching heterozygotes. Ignored if allAlts=1.
 
-max.het=0.5     maximum fraction of heterozygotes among non-missing genotypes
+max.het=0.5      maximum fraction of heterozygotes among non-missing genotypes
                  (guards against lumped paralogous loci).
 
 Example: 
-replicatesMatch.pl vcf=cdh_alltags.ul_Variants_count10_ab10_sb10_clip0.vcf \
-replicates=clonepairs.tab > vqsr.denovo.vcf
+replicatesMatch.pl vcf=round2.vcf replicates=clonepairs.tab > vqsr.vcf
 
 ";
 
@@ -41,7 +40,7 @@ my $missing=0.25;
 my $fmatch=1;
 my $altonly=0;
 my $maxhet=0.5;
-my $hetMatch=1;
+my $hetMatch=2;
 
 if ("@ARGV"=~/vcf=(\S+)/) { $vcf=$1;}
 else { die $usage; }
@@ -72,7 +71,7 @@ my $numhets=0;
 
 while (<VCF>) {
 	if ($_=~/^#/) {
-		if ($_=~/^##/) { next;}
+		if ($_=~/contig/) { next;}
 		elsif ($_=~/^#CHROM/){
 			print $_;
 			chop;
@@ -133,6 +132,8 @@ while (<VCF>) {
 	my $nalt=0;
 	my $nref=0;
 	my $het=0;
+	my $nalleles=0;
+	my %seen={};
 	for(my $p=0;$pp=$pairs[$p];$p++) {
 		($r1,$r2)=split(":",$npairs[$p]);
 		($i1,$i2)=split(":",$pp);
@@ -145,6 +146,14 @@ while (<VCF>) {
 		elsif ($g1 eq $g2) { 
 			$match++;
 			($a1,$a2)=split(/\D/,$g1);
+			if (!$seen{$a1}) {
+				$seen{$a1}=1;
+				$nalleles++;
+			}
+                        if (!$seen{$a2}) {
+                                $seen{$a2}=1;
+                                $nalleles++;
+                        }
 			if ($a1=~/[123456789]/) { $nalt++;}
 			else { $nref++;}
 			if ($a2=~/[123456789]/) { $nalt++;}			
@@ -157,8 +166,10 @@ while (<VCF>) {
 	$pass++;
 	if ($nalt) { $numalt++;} else {next;}
 	next if ( $altonly==0 && $het<$hetMatch );
-	if ( $altonly==0 ) { $hetpass++; }
-	if ($nref and $nalt) { 
+	$hetpass++; 
+#if (!$nref || !$nalt ){warn "@lin\nref:$nref\nalt:$nalt\n\n";}
+
+	if ($nalleles>1) { 
 		$poly++;
 #		if ($het) { 	
 			$numout++;
