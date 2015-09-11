@@ -11,7 +11,7 @@ site=[pattern] perl-style pattern of the restriction site to recognise, in singl
 		default is BcgI: \'.{12}CGA.{6}TGC.{12}|.{12}GCA.{6}TCG.{12}\'
 		if you need AlfI, here is how to define it: \'.{12}GCA.{6}TGC.{12}\'
 adaptor=[dna sequence] adaptor sequence to look for on the far end of the read. 
-		Default AGATCGGAAGA
+		Default AGATCGGAA
 sampleID=[integer] the position of name-deriving string in the file name
 					if separated by underscores, such as: 
 					for input file Sample_RNA_2DVH_L002_R1.cat.fastq
@@ -26,7 +26,7 @@ my $site=".{12}CGA.{6}TGC.{12}|.{12}GCA.{6}TCG.{12}";
 if("@ARGV"=~/site=(\S+)/){ $site=$1;}
 my $sampleid=100;
 if("@ARGV"=~/sampleID=(\d)/){ $sampleid=$1;}
-my $adaptor="AGATCGGAAGA";
+my $adaptor="AGATCGGAA";
 if("@ARGV"=~/adaptor=(\S+)/){ $adaptor=$1;}
 my $q33="-Q33";
 if("@ARGV"=~/q33=0/){ $q33="";}
@@ -49,7 +49,7 @@ foreach $fqf (@fqs) {
 		print "trim2bRAD.pl $fqf \"$site\" \"$adaptor\" >$outname\n";
 	}
 	else {
-		print "trim2bRAD_2barcodes.pl $fqf \"$site\" \"[ATGC]{$bar2}\" \"$adaptor\" sampleID=$sampleid\n";
+		print "trim2bRAD_2barcodes.pl fastq=$fqf site=\"$site\" barcode2=\"[ATGC]{$bar2}\" adaptor=\"$adaptor\" sampleID=$sampleid\n";
 	}
 }
 

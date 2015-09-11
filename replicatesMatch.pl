@@ -2,7 +2,7 @@
 
 my $usage="
 
-replicatesMatch.pl : (version 0.3, April 14, 2015)
+replicatesMatch.pl : (version 0.4, September 10 2015)
 
 Selects polymorphic variants that have identical genotypes among replicates.  
 
@@ -23,13 +23,15 @@ missing=[float]  allowed fraction of missing genotypes, default 0.25
 
 allAlts=[1|0]    output all SNPs showing non-reference alleles (not necessarily
                  polymorphic among genotyped samples). Default 0
+                 
+hetMatch=1       minimal number of matching heterozygotes. Ignored if allAlts=1.
 
-max.het=[float]  maximum fraction of heterozygotes (guards against lumped paralogous 
-                 loci). Default 0.75.
+max.het=0.5     maximum fraction of heterozygotes among non-missing genotypes
+                 (guards against lumped paralogous loci).
 
 Example: 
 replicatesMatch.pl vcf=cdh_alltags.ul_Variants_count10_ab10_sb10_clip0.vcf \
-replicates=clonepairs.tab polyonly=1 > vqsr.denovo.vcf
+replicates=clonepairs.tab > vqsr.denovo.vcf
 
 ";
 
@@ -38,7 +40,8 @@ my $reps;
 my $missing=0.25;
 my $fmatch=1;
 my $altonly=0;
-my $maxhet=0.75;
+my $maxhet=0.5;
+my $hetMatch=1;
 
 if ("@ARGV"=~/vcf=(\S+)/) { $vcf=$1;}
 else { die $usage; }
@@ -48,6 +51,7 @@ if ("@ARGV"=~/missing=(\S+)/) { $missing=$1;}
 if ("@ARGV"=~/matching=(\S+)/) { $fmatch=$1;}
 if ("@ARGV"=~/allAlts=1/ ) { $altonly=1;}
 if ("@ARGV"=~/max.het=(\S+)/) { $maxhet=$1;}
+if ("@ARGV"=~/hetMatch=(\d+)/) { $hetMatch=$1;}
 
 open VCF, $vcf or die "cannot open vcf file $vcf\n";
 
@@ -59,6 +63,7 @@ my $r1;
 my $r2;
 my $nreps=0;
 my $pass=0;
+my $hetpass=0;
 my $total=0;
 my $poly=0;
 my $numalt=0;
@@ -67,7 +72,7 @@ my $numhets=0;
 
 while (<VCF>) {
 	if ($_=~/^#/) {
-		if ($_=~/contig/) { next;}
+		if ($_=~/^##/) { next;}
 		elsif ($_=~/^#CHROM/){
 			print $_;
 			chop;
@@ -106,6 +111,15 @@ while (<VCF>) {
 	$total++;
 	my @lin=split("\t",$_);
 	my @start=splice(@lin,0,9);
+	
+	my $missing = () = "@lin" =~ /\.[\/\|]\./gi;
+	my $heteros = () = "@lin" =~ /0[\/\|]1/gi;
+	my $althomos = () = "@lin" =~ /1[\/\|]1/gi;
+	my $refhomos = () = "@lin" =~ /0[\/\|]0/gi;
+	my $nsam= scalar @lin;
+	
+	if ($heteros/($nsam-$missing) > $maxhet) { 	next; 	}
+	
 #warn "--------------\n$start[0]_$start[1]\n\n";
 	my @rest;
 	my $match=0;
@@ -140,10 +154,13 @@ while (<VCF>) {
 	}
 	next if ($match < ($nreps*$fmatch) );
 	next if ( ($miss/$nreps) > $missing);
-	if ($nalt) { $numalt++;}
+	$pass++;
+	if ($nalt) { $numalt++;} else {next;}
+	next if ( $altonly==0 && $het<$hetMatch );
+	if ( $altonly==0 ) { $hetpass++; }
 	if ($nref and $nalt) { 
 		$poly++;
-		if ($het/$nreps<$maxhet) { 	
+#		if ($het) { 	
 			$numout++;
 			print join("\t",@start)."\t".join("\t",@lin)."\n";
 
@@ -157,14 +174,14 @@ while (<VCF>) {
 #}
 #warn "het:$het nalt:$nalt nref:$nref miss:$miss match:$match\n";
 
-		}
+#		}
 	}
 	elsif ($altonly){
-		if ($nalt and $het/$nreps<$maxhet) {
+		if ($nalt) {
 			$numout++;
 			print join("\t",@start)."\t".join("\t",@lin)."\n";
 		}
 	}
-	$pass++;
 }
-warn "$total total SNPs\n$pass passed\n$numalt alt alleles\n$poly polymorphic\n$numout written\n\n";	
+if ($altonly==0) { warn "$total total SNPs\n$pass pass hets and match filters\n$numalt show non-reference alleles\n$hetpass have matching heterozygotes in at least $hetMatch replicate pair(s)\n$poly polymorphic\n$numout written\n\n";	}
+else { warn "$total total SNPs\n$pass pass hets and match filters\n$numalt show non-reference alleles\n$numout written\n\n";	}
