@@ -2,7 +2,7 @@
 
 my $usage="
 
-replicatesMatch.pl : (version 0.5, September 11 2015)
+replicatesMatch.pl : (version 0.6, September 13 2015)
 
 Selects polymorphic variants that have identical genotypes among replicates.  
 
@@ -21,13 +21,14 @@ matching=[float] required fraction of matching genotypes
 
 missing=[float]  allowed fraction of missing genotypes, default 0.25
 
-allAlts=[1|0]    output all SNPs showing non-reference alleles (not necessarily
-                 polymorphic among genotyped samples). Default 0
-                 
-hetMatch=2       minimal number of matching heterozygotes. Ignored if allAlts=1.
+altPairs=2       minimal number of matching genotypes involving non-teference alleles. 
+
+hetPairs=0       minimal number of matching heterozygotes. 
 
 max.het=0.5      maximum fraction of heterozygotes among non-missing genotypes
                  (guards against lumped paralogous loci).
+
+polyonly=[1|0]   extract only polymorphic sites. Default 0.
 
 Example: 
 replicatesMatch.pl vcf=round2.vcf replicates=clonepairs.tab > vqsr.vcf
@@ -38,9 +39,11 @@ my $vcf;
 my $reps;
 my $missing=0.25;
 my $fmatch=1;
-my $altonly=0;
+#my $allalts=0;
 my $maxhet=0.5;
-my $hetMatch=2;
+my $hetPairs=0;
+my $altPairs=2;
+my $polyonly=0;
 
 if ("@ARGV"=~/vcf=(\S+)/) { $vcf=$1;}
 else { die $usage; }
@@ -48,9 +51,11 @@ if ("@ARGV"=~/replicates=(\S+)/) { $reps=$1;}
 else { die $usage; }
 if ("@ARGV"=~/missing=(\S+)/) { $missing=$1;}
 if ("@ARGV"=~/matching=(\S+)/) { $fmatch=$1;}
-if ("@ARGV"=~/allAlts=1/ ) { $altonly=1;}
+#if ("@ARGV"=~/allAlts=1/ ) { $allalts=1;}
 if ("@ARGV"=~/max.het=(\S+)/) { $maxhet=$1;}
-if ("@ARGV"=~/hetMatch=(\d+)/) { $hetMatch=$1;}
+if ("@ARGV"=~/hetPairs=(\d+)/) { $hetPairs=$1;}
+if ("@ARGV"=~/altPairs=(\d+)/) { $altPairs=$1;}
+if ("@ARGV"=~/polyonly=1/) { $polyonly=1;}
 
 open VCF, $vcf or die "cannot open vcf file $vcf\n";
 
@@ -63,6 +68,7 @@ my $r2;
 my $nreps=0;
 my $pass=0;
 my $hetpass=0;
+my $altpass=0;
 my $total=0;
 my $poly=0;
 my $numalt=0;
@@ -111,19 +117,17 @@ while (<VCF>) {
 	my @lin=split("\t",$_);
 	my @start=splice(@lin,0,9);
 	
-	my $missing = () = "@lin" =~ /\.[\/\|]\./gi;
-	my $heteros = () = "@lin" =~ /0[\/\|]1/gi;
-	my $althomos = () = "@lin" =~ /1[\/\|]1/gi;
-	my $refhomos = () = "@lin" =~ /0[\/\|]0/gi;
-	my $nsam= scalar @lin;
-	
-	if ($heteros/($nsam-$missing) > $maxhet) { 	next; 	}
+	my $Missing = () = "@lin" =~ /\.[\/\|]\./gi;
+#	my $Heteros = () = "@lin" =~ /0[\/\|]1/gi;
+#	my $Althomos = () = "@lin" =~ /1[\/\|]1/gi;
+#	my $Refhomos = () = "@lin" =~ /0[\/\|]0/gi;
+	my $Nsam= scalar @lin;	
+	if ($Heteros/($Nsam-$Missing) > $maxhet) { 	next; 	}
 	
 #warn "--------------\n$start[0]_$start[1]\n\n";
 	my @rest;
 	my $match=0;
 	my $miss=0;
-	my %seen={};
 	my $anum=0;
 	my $g1;
 	my $g2;
@@ -133,6 +137,7 @@ while (<VCF>) {
 	my $nref=0;
 	my $het=0;
 	my $nalleles=0;
+	my $altpairs=0;
 	my %seen={};
 	for(my $p=0;$pp=$pairs[$p];$p++) {
 		($r1,$r2)=split(":",$npairs[$p]);
@@ -150,13 +155,16 @@ while (<VCF>) {
 				$seen{$a1}=1;
 				$nalleles++;
 			}
-                        if (!$seen{$a2}) {
-                                $seen{$a2}=1;
-                                $nalleles++;
-                        }
-			if ($a1=~/[123456789]/) { $nalt++;}
+			if (!$seen{$a2}) {
+				$seen{$a2}=1;
+				$nalleles++;
+			}
+			if ($a1=~/[123456789]/) { $nalt++; }
 			else { $nref++;}
-			if ($a2=~/[123456789]/) { $nalt++;}			
+			if ($a2=~/[123456789]/) { 
+				$nalt++;
+				$altpairs++;
+			}		
 			else { $nref++;}
 			if ($a1 ne $a2) {$het++;}
 		}
@@ -165,34 +173,29 @@ while (<VCF>) {
 	next if ( ($miss/$nreps) > $missing);
 	$pass++;
 	if ($nalt) { $numalt++;} else {next;}
-	next if ( $altonly==0 && $het<$hetMatch );
+	next if ($altpairs<$altPairs );
+	$altpass++; 
+	next if ( $het<$hetPairs );
 	$hetpass++; 
-#if (!$nref || !$nalt ){warn "@lin\nref:$nref\nalt:$nalt\n\n";}
-
 	if ($nalleles>1) { 
 		$poly++;
-#		if ($het) { 	
-			$numout++;
-			print join("\t",@start)."\t".join("\t",@lin)."\n";
-
-#warn "--------------\n$start[0]_$start[1]\n";
-#for(my $p=0;$pp=$pairs[$p];$p++) {
-#	($r1,$r2)=split(":",$npairs[$p]);
-#	($i1,$i2)=split(":",$pp);
-#	($g1,@rest)=split(":",$lin[$i1]);
-#	($g2,@rest)=split(":",$lin[$i2]);
-#warn "$r1:$i1\t$g1\t$r2:$i2\t$g2\n";
-#}
-#warn "het:$het nalt:$nalt nref:$nref miss:$miss match:$match\n";
-
-#		}
+		$numout++;
+		print join("\t",@start)."\t".join("\t",@lin)."\n";
 	}
-	elsif ($altonly){
+	elsif (!$polyonly){
 		if ($nalt) {
 			$numout++;
 			print join("\t",@start)."\t".join("\t",@lin)."\n";
 		}
 	}
 }
-if ($altonly==0) { warn "$total total SNPs\n$pass pass hets and match filters\n$numalt show non-reference alleles\n$hetpass have matching heterozygotes in at least $hetMatch replicate pair(s)\n$poly polymorphic\n$numout written\n\n";	}
-else { warn "$total total SNPs\n$pass pass hets and match filters\n$numalt show non-reference alleles\n$numout written\n\n";	}
+warn "
+
+$total total SNPs
+$pass pass hets and match filters
+$numalt show non-reference alleles
+$altpass have alterantive alleles in at least $altPairs replicate pair(s)
+$hetpass have matching heterozygotes in at least $hetPairs replicate pair(s)
+$poly polymorphic\n$numout written
+
+";	
