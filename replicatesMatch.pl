@@ -21,7 +21,7 @@ matching=[float] required fraction of matching genotypes
 
 missing=[float]  allowed fraction of missing genotypes, default 0.25
 
-altPairs=2       minimal number of matching genotypes involving non-teference alleles. 
+altPairs=2       minimal number of matching genotypes involving non-reference alleles. 
 
 hetPairs=0       minimal number of matching heterozygotes. 
 
