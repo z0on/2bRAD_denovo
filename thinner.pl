@@ -5,13 +5,13 @@ my $usage="
 thinner.pl (v.2) : 
 
 Leaves only one SNP per given interval, either the one with the highest minor allele 
-frequency, or chosen at randomom.
+frequency, or chosen at random.
 
 Arguments:
 
    vcf=[file name] : vcf file name
 interval=[integer] : interval length, default 40 (for 2bRAD tags)
-    randomom=[0|1] : whether to choose SNPs randomomly. With 0 (default), the SNP with 
+      random=[0|1] : whether to choose SNPs randomly. With 0 (default), the SNP with 
                      the highest minor allele frequency will be chosen.
 
 Output:  thinned VCF, printed to STDOUT
