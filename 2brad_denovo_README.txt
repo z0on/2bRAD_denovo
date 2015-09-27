@@ -241,8 +241,16 @@ vcftools --vcf cdh_alltags.ul_Variants_count10_ab10_sb10_clip0.vcf --minQ 29 --m
 # After filtering, kept 132 out of 132 Individuals
 # After filtering, kept 26023 out of a possible 76865 Sites
 
-# thinning SNP dataset (leaving one snp per tag, with the highest minor allele frequency)
-thinner.pl vcf=denovo.filt0.recode.vcf > thinDenov.vcf
+# discarding loci with too many heterozygotes, which are likely lumped paralogs
+# (by default, fraction of heterozygotes should not exceed maxhet=0.75)
+# this step can also filter for the fraction of missing genotypes (default maxmiss=0.5)
+hetfilter.pl vcf=denovo.filt0.recode.vcf >denovo.hetfilt.vcf
+
+# thinning SNP dataset - leaving one snp per tag
+# by default, it will leave the SNP with the highest minor allele frequency; this
+# is good for ADMIXTURE or Fst analysis
+# if you plan to use dadi, however, use it with the option criterion=maxDP-random
+thinner.pl vcf=denovo.hetfilt.vcf > thinDenov.vcf
 
 # evaluating accuracy (the most important one is Heterozygote discovery rate, last column) 
 # based on replicates

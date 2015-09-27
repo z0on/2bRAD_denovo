@@ -166,8 +166,9 @@ unzip plink_linux_x86_64.zip
 cd-
 
 # creating a dataset with fake "chr" chromosome designations
-cat noout.vcf | perl -pe 's/locus(\d)(\d+)\t\d+/chr$1\t$2/' >nooutchrom.vcf
 cat denovo.filt.recode.vcf | perl -pe 's/locus(\d)(\d+)\t\d+/chr$1\t$2/' >nooutchrom.vcf
+# run next line if you ran bayescan to remove Fst outliers
+# cat noout.vcf | perl -pe 's/locus(\d)(\d+)\t\d+/chr$1\t$2/' >nooutchrom.vcf
 
 # reformatting VCF into plink binary BED format
 plink --vcf nooutchrom.vcf --make-bed --out denov

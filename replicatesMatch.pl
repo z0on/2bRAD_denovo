@@ -1,8 +1,7 @@
 #!/usr/bin/perl
 
 my $usage="
-
-replicatesMatch.pl : (version 0.6, September 13 2015)
+replicatesMatch.pl : (version 0.7, September 27 2015)
 
 Selects polymorphic variants that have identical genotypes among replicates.  
 
@@ -25,7 +24,7 @@ altPairs=2       minimal number of matching genotypes involving non-reference al
 
 hetPairs=0       minimal number of matching heterozygotes. 
 
-max.het=0.5      maximum fraction of heterozygotes among non-missing genotypes
+max.het=0.75     maximum fraction of heterozygotes among non-missing genotypes
                  (guards against lumped paralogous loci).
 
 polyonly=[1|0]   extract only polymorphic sites. Default 0.
@@ -40,7 +39,7 @@ my $reps;
 my $missing=0.25;
 my $fmatch=1;
 #my $allalts=0;
-my $maxhet=0.5;
+my $maxhet=0.75;
 my $hetPairs=0;
 my $altPairs=2;
 my $polyonly=0;
@@ -95,7 +94,7 @@ while (<VCF>) {
 						$indr{$r1}=$i;
 						$collect++;
 					}
-					elsif ($s eq $r2) { 
+					if ($s eq $r2) { 
 						$indr{$r2}=$i;
 						$collect++;
 					}
@@ -117,12 +116,15 @@ while (<VCF>) {
 	my @lin=split("\t",$_);
 	my @start=splice(@lin,0,9);
 	
-	my $Missing = () = "@lin" =~ /\.[\/\|]\./gi;
-#	my $Heteros = () = "@lin" =~ /0[\/\|]1/gi;
+	my $Missing = () = "@lin" =~ /\.\/\./gi;
+	my $Heteros = () = "@lin" =~ /0[\/\|]1/gi;
 #	my $Althomos = () = "@lin" =~ /1[\/\|]1/gi;
 #	my $Refhomos = () = "@lin" =~ /0[\/\|]0/gi;
-	my $Nsam= scalar @lin;	
-	if ($Heteros/($Nsam-$Missing) > $maxhet) { 	next; 	}
+	my $Nsam= scalar @lin;
+	if ($Heteros/($Nsam-$Missing+0.01) > $maxhet) { 	
+#warn "badHet: Het:$Heteros;Miss:$Missing;Tot:$Nsam\n";
+		next; 	
+	}
 	
 #warn "--------------\n$start[0]_$start[1]\n\n";
 	my @rest;
@@ -172,7 +174,7 @@ while (<VCF>) {
 	next if ($match < ($nreps*$fmatch) );
 	next if ( ($miss/$nreps) > $missing);
 	$pass++;
-	if ($nalt) { $numalt++;} else {next;}
+	if ($nalt) { $numalt++;} else {	next;}
 	next if ($altpairs<$altPairs );
 	$altpass++; 
 	next if ( $het<$hetPairs );
