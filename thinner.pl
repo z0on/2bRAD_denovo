@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 my $usage="
-thinner.pl (v.4.1) : 
+thinner.pl (v.4.2) : 
 
 Leaves only one SNP per specified nucleotide distance interval, chosen by its 
 allele frequency, sequencing depth, combination of those, or randomly.
@@ -64,16 +64,21 @@ my $maxdp=0;
 my @snps=();
 my $chrom0="";
 my @maxdps=();
+my $skipped=0;
+my $selected=0;
+my $total=0;
 
 while (<VCF>) {
 	if ($_=~/^#/) { print and next;}
 	chomp;
+	$total++;
 	@dats=split(/\t/,$_);
 	$chrom=$dats[0];
 	if (!$chrom0) { $chrom0=$chrom;}
 	$pos=$dats[1];
 	if ( $pos-$poslast < $inter/2 and ($chrom eq $chrom0)) {
 #warn "\t\t\tskipping $pos\n" ;
+		$skipped++;
 		next;
 	}
 	$info=$dats[7];
@@ -120,7 +125,8 @@ while (<VCF>) {
 			my @datss=split(/\t/,$datum);
 			$poslast=$datss[1];
 #warn "\t\tSel:$poslast\n";
-			print $datum,"\n" ; 				 
+			print $datum,"\n" ;
+			$selected++; 				 
 		}
 		$maxaf=0;
 		$maxdp=0;
@@ -129,6 +135,7 @@ while (<VCF>) {
 		@snps=();
 		if ( $pos-$poslast < $inter/2 and ($chrom eq $chrom0)) {
 #warn "\t\t\tskipping $pos\n" ;
+			$skipped++;
 			next;
 		}
 		if ($chrom ne $chrom0) {
@@ -147,31 +154,39 @@ while (<VCF>) {
 	}
 }
 
-		if ($snps[0]){
-			my $datum;
+if ($snps[0]){
+	my $datum;
 #warn "$chrom0: $#snps | @afs | @dps :  maxaf:$afs[$maxaf]; maxdp:$dps[$maxdp] (@maxdps) \n";
-			if ($criterion eq "random") { 
-				$datum=$snps[rand @snps];
+	if ($criterion eq "random") { 
+		$datum=$snps[rand @snps];
+	}
+	elsif ($criterion eq "maxAF") { 
+		$datum=$snps[$maxaf] ;
+	}
+	elsif ($criterion eq "maxDP-random"){ 
+		$datum=$snps[$maxdps[rand @maxdps]] ; 
+	}
+	elsif ($criterion eq "maxDP-maxAF"){
+		$maxaf=0;
+		foreach my $md (@maxdps) { 
+			if ($afs[$md]>$maxaf) {
+				$maxaf=$afs[$md];
+				$maxdp=$md;
 			}
-			elsif ($criterion eq "maxAF") { 
-				$datum=$snps[$maxaf] ;
-			}
-			elsif ($criterion eq "maxDP-random"){ 
-				$datum=$snps[$maxdps[rand @maxdps]] ; 
-			}
-			elsif ($criterion eq "maxDP-maxAF"){
-				$maxaf=0;
-				foreach my $md (@maxdps) { 
-					if ($afs[$md]>$maxaf) {
-						$maxaf=$afs[$md];
-						$maxdp=$md;
-					}
-				} 	
-				$datum=$snps[$maxdp] ; 
+		} 	
+		$datum=$snps[$maxdp] ; 
 #warn "chose $maxdp\n";
-			}
-			my @datss=split(/\t/,$datum);
-			$poslast=$datss[1];
+	}
+	my @datss=split(/\t/,$datum);
+	$poslast=$datss[1];
 #warn "\t\tSel:$poslast\n";
-			print $datum,"\n" ; 				 
-		}
+	print $datum,"\n" ;
+	$selected++; 				 
+}
+
+warn "
+$total total loci
+$skipped loci skipped because they were closer than ",$inter/2,"
+$selected loci selected
+
+";
