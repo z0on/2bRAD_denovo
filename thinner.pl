@@ -150,7 +150,7 @@ while (<VCF>) {
 		push @dps,$dp;
 		@maxdps=();
 		push @maxdps, 0; 
-		push @snps,join("\t",@dats) if $pos-$poslast > $inter/2;
+		push @snps,join("\t",@dats);
 	}
 }
 

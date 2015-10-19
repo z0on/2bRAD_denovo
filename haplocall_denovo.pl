@@ -50,7 +50,7 @@ clip=0            number of bases to clip off the ends of reads
 
 ----- Allele filters -----
 
-aobs=5           min number of times an allele must be observed across all samples. 
+aobs=2            min number of times an allele must be observed across all samples. 
 
 strbias=10        strand bias cutoff: minimal ratio between reverse and 
                   direct reads, x100. 0 would mean no filtering.
@@ -59,7 +59,7 @@ abias=10          allele bias cutoff: minimal fraction of reads per locus corres
                   to the candidate allele, averaged across individuals
                   containing the allele, x100. 
 
-ind=2             minimum number of individuals in which a candidate new allele
+ind=1             minimum number of individuals in which a candidate new allele
                   has to be found.
 
 ----- Locus filters -----
@@ -67,10 +67,11 @@ ind=2             minimum number of individuals in which a candidate new allele
 found=0.25        fraction of individuals in which a locus has to be genotyped. 
                   Filter for this parameter later with vcftools.
 
-hetero=0.5        maximum allowed fraction of heterozygotes. Guards against lumped paralogous loci.
+hetero=0.5        maximum allowed fraction of heterozygotes. Guards against lumped 
+                  paralogous loci.
 
 mono=toss         whether to keep non-polymorphic loci. Specify mono=keep to keep them
-                  (if coalescent analysis is planned downstream).
+                  (if coalescent analysis with MIGRATE is planned downstream).
 
 ----- Genotype filters -----
 
