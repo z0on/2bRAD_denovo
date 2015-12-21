@@ -25,6 +25,13 @@ would need to edit the launcher_creator.py script to make its default settings
 compatible with your cluster. 
 
 ==============================================
+IMPORTANT: DO NOT SEQUENCE 2BRAD LIBRARIES ALONE ON A HISEQ4000 LANE! INVARIANT BASES
+(ADAPTOR, RESTRICTION SITE) WILL NOT BE READ WELL. MIX IN 20% OF PHIX SAMPLES TO 
+DIVERSIFY; OR MIX YOUR 2BRAD LIBRARIES WITH SOMEONE ELSE'S NOT-2BRAD LIBRARIES 
+(JUST MAKE SURE THE BARCODES DO NOT OVERLAP) 
+
+If you did and you have used BcgI enzyme, use 2bRAD_trim_launch_dedup2.pl for trimming
+==============================================
 
 # unzipping multiple *.gz files
 ls *.gz | perl -pe 's/^(.+)$/gunzip $1/' >gunz
@@ -56,6 +63,9 @@ qsub trimjob
 2bRAD_trim_launch.pl fastq barcode2=4 > trims
 # And if you have the original-style libraries without degenerate tag and without in-line barcode, use this:
 2bRAD_trim_launch.pl fastq > trims
+# AND IF you sequenced your double-barcoded, deduplicatable libraries on HiSeq 4000 alone
+# (resulting in poor quality at restriction site and adaptor bases) and you have used BcgI enzyme, use this:
+2bRAD_trim_launch_dedup2.pl fastq > trims
 
 
 # quality filtering using fastx_toolkit

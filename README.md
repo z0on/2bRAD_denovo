@@ -28,3 +28,4 @@ Also included are walkthroughs for analysis (2brad_denovo_analysis.txt):
 - fastSTRUCTURE
 - dadi
 
+IMPORTANT: Do not sequence 2bRAD libraries on a HiSeq 4000 lane alone! Invariant bases (adaptor, restriction site) will be read very poorly, resulting in read trimming issues. Mix 20% of PhiX libraries with your 2bRAD samples to avoid this problem, or share lane with someone else's non-2bRAD samples. (If you already did, no worries - there is a solution; contact me.)
