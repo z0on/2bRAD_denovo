@@ -53,7 +53,7 @@ my $GQpos=-1;
 my %num2pops={};
 my %pops2num={};
 my $totals=0;
-print "CHROM\tPOS\tREF\tALT\tPOP\tREFC\tALTC\tMISSC\n";
+print "SNP\tCHROM\tPOS\tREF\tALT\tPOP\tREFC\tALTC\tMISSC\n";
 
 while (<VCF>) {
 	if ($_=~/^#CHROM/) { 
@@ -115,6 +115,11 @@ while (<VCF>) {
 				$popRef{$pop}++;
 				$popAlt{$pop}++;
 			}
+			elsif ($geno[0] eq "1/0" || $geno[0] eq "1|0" ) { 
+				$popRef{$pop}++;
+				$popAlt{$pop}++;
+			}
+			else { warn "weird genotype: $geno[0]\n"; }
 		}
 	}
 
