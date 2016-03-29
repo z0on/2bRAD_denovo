@@ -15,7 +15,7 @@ Arguments:
 
                vcf=[file name] : vcf file name
             
-            interval=[integer] : interval length, default 80 (for 2bRAD tags)
+            interval=[integer] : interval length, default 40 (for 2bRAD tags)
             
 criterion=[maxAF|maxDP-random|maxDP-maxAF|random] : SNP choosing criterion.
                              maxAF - maximum minor allele frequency;
@@ -38,7 +38,7 @@ Mikhail Matz, matz\@utexas.edu
 my $vcf;
 if (" @ARGV "=~/vcf=(\S+)/) { $vcf=$1; } else { die $usage; }
 my $inter=80;
-if (" @ARGV "=~/interval=(\d+)/) { $inter=$1; } 
+if (" @ARGV "=~/interval=(\d+)/) { $inter=$1*2; } 
 my $criterion="maxDP-maxAF";
 if (" @ARGV "=~/criterion=maxAF/) { $criterion="maxAF"; } 
 elsif (" @ARGV "=~/criterion=random/) { $criterion="random"; } 

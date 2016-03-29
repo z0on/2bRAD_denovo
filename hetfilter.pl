@@ -46,12 +46,12 @@ while (<VCF>) {
 	my $Refhomos = () = "@lin" =~ /0[\/\|]0/gi;
 	my $Nsam= scalar @lin;
 	if ($Missing/$Nsam > $maxmiss) { 
-warn "\tHet:$Heteros;Miss:$Missing;Tot:$Nsam - badMiss\n";
+#warn "\tHet:$Heteros;Miss:$Missing;Tot:$Nsam - badMiss\n";
 		$badMissing++;
 		next;
 	}
 	if ($Heteros/($Nsam-$Missing+0.01) > $maxhet) { 	
-warn "Het:$Heteros;Miss:$Missing;Tot:$Nsam - badHet\n";
+#warn "Het:$Heteros;Miss:$Missing;Tot:$Nsam - badHet\n";
 		$badHeteros++;
 		next; 	
 	}
