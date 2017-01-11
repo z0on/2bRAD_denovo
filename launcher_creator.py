@@ -122,6 +122,15 @@ echo " Parameteric Job Complete"
 echo " "
 '''
 
+parametric_job_submission_ls5='''
+
+export LAUNCHER_PLUGIN_DIR=$LAUNCHER_DIR/plugins
+export LAUNCHER_RMI=SLURM
+export LAUNCHER_JOB_FILE={jobfile}
+
+$LAUNCHER_DIR/paramrun
+'''
+
 def file_len(fname):
     f = open(fname)
     contents = f.readlines()
@@ -286,8 +295,86 @@ def generate_stampede_launcher(results, launcher_file):
     if results.job:
         launcher_file.write(parametric_job_submission.format(control_file=results.job))
 
+
+def generate_ls5_launcher(results, launcher_file):
+    """
+    Write a Lonestar 5 launcher SLURM script.
+    """
+
+    # Must account (on Lonestar 5) for normal having 16 threads per node
+    if results.queue == 'largemem':
+        threads_per_node = 32
+    elif results.queue == 'hugemem':
+        threads_per_node = 20
+    else:
+        threads_per_node = 24
+
+    num_nodes_line = ''
+    # if not results.wayness:
+    #     results.wayness = 16
+    #     num_cores_line = ''
+
+    if results.allocation:
+        allocation_line = '#SBATCH -A {}'.format(results.allocation)
+    else:
+        allocation_line = ''
+
+    if results.email:
+        email_line = '#SBATCH --mail-type=ALL\n#SBATCH --mail-user={}\n'.format(results.email)
+    else:
+        email_line = ''
+
+    if not results.num_nodes:
+        # If a number of nodes is not explicitly specified, calculate based on number of commands in jobs file, and optional wayness.
+        if results.job:
+            num_jobs = file_len(results.job)
+            if num_jobs == 0:
+                print 'Your job file appears to be empty. Please fix this error.'
+                return
+        else:
+            num_jobs = 1
+    
+        if results.wayness:
+            num_nodes, remainder = divmod(num_jobs, results.wayness)
+            if remainder != 0:
+                num_nodes += 1
+            num_nodes_line = '#SBATCH -N {}\n'.format(num_nodes)
+        else:
+            num_nodes, remainder = divmod(num_jobs, 24)
+            if remainder != 0:
+                num_nodes += 1                
+    else:
+        # A number of nodes has been specified. Default wayness is 16 on Stampede. Use specified wayness to calculate total tasks.
+        num_nodes = results.num_nodes
+        num_nodes_line = '#SBATCH -N {}\n'.format(num_nodes)
+        
+        if results.wayness:
+            num_jobs = num_nodes * results.wayness
+        else:
+            num_jobs = num_nodes * 24
+
+    if not results.submit_cmd:
+        print 'Using {} nodes.'.format(num_nodes)
+        print 'Writing to {}.'.format(results.launcher)
+
+    launcher_file.write(stampede_parameters.format(
+        name=results.name,
+        num_jobs=num_jobs,
+        num_nodes_line=num_nodes_line,
+        queue=results.queue,
+        time=results.time,
+        email_line=email_line,
+        allocation_line=allocation_line))
+
+    launcher_file.write(bash_and_modules.format(modules=results.modules,
+        bash_commands=results.bash_commands))
+
+    if results.job:
+        launcher_file.write(parametric_job_submission_ls5.format(jobfile=results.job))
+
+
 def check_time_and_queue(results):
-    host = subprocess.check_output("hostname").split('.')[1]
+    host = subprocess.check_output(["hostname", "-f"]).split('.')[1]
     queues = {'ls4':['normal','development','largemem','gpu','vis','serial'],
               'stampede':['normal','development','largemem','serial','large','request','normal-mic','gpu','gpudev','vis']}
 
@@ -320,6 +407,11 @@ def check_time_and_queue(results):
     elif host == "stampede" and results.queue == 'serial':      time_limit = 12
     elif host == "stampede" and \
         results.queue in ['normal','largemem','normal-mic']:    time_limit = 48
+    elif host == "ls5"      and results.queue == 'development': time_limit = 2
+    elif host == "ls5"      and results.queue == 'gpu':         time_limit = 24
+    elif host == "ls5"      and results.queue == 'vis':         time_limit = 8
+    elif host == "ls5" and \
+        results.queue in ['normal','largemem','hugemem']:       time_limit = 48
     else:                                                       time_limit = 24
 
     if (hh > time_limit) or (hh == time_limit and (mm > 0 or ss > 0)):
@@ -328,17 +420,26 @@ def check_time_and_queue(results):
                   'on this machine. Please change queue or reduce requested time.' )
 
 
+class ArgumentParserDefaultHelp(argparse.ArgumentParser):
+    '''Simple variation on ArgumentParser. When an error is thrown, this inherited class prints the entire help message.'''
+
+    def error(self, message):
+        self.print_help()
+        sys.stderr.write('\nerror: {}\n\n'.format(message))
+        sys.exit(2)
+
+
 def main():
     # Get environment variables, os.environ.get returns 'none' if the environment variable isn't defined
-    env_allocation = 'mega2014' # os.environ.get('ALLOCATION')
-    env_email_address = 'matz@utexas.edu' #os.environ.get('EMAIL_ADDRESS')
+    env_allocation = os.environ.get('ALLOCATION')
+    env_email_address = os.environ.get('EMAIL_ADDRESS')
     
-    parser = argparse.ArgumentParser(description='''Create TACC launchers for Stampede and Lonestar, and just run commands otherwise.
-Depending on the host, launcher_creator.py generated a SLURM or SGE launcher as appropriate.
+    parser = ArgumentParserDefaultHelp(description='''Create TACC launchers for Stampede and Lonestar, and just run commands otherwise.
+Depending on the host, launcher_creator.py generates a SLURM or SGE launcher as appropriate.
 Report problems to rt-other@ccbb.utexas.edu''')
     required = parser.add_argument_group('Required')
     required.add_argument('-n', action='store', dest='name', required=True, help='The name of your job.')
-    required.add_argument('-t', action='store', dest='time', default="01:00:00", help='The time you want to give to your job. Format: hh:mm:ss')
+    required.add_argument('-t', action='store', dest='time', required=True, help='The time you want to give to your job. Format: hh:mm:ss')
     commands = parser.add_argument_group('Commands', 'You must use at least one of these options to submit your commands for TACC.')
     commands.add_argument('-j', action='store', dest='job', help='The name of the job file containing your commands.')
     commands.add_argument('-b', action='store', dest='bash_commands', default='', help='A string of Bash commands that are executed before the parametric jobs are launched.')
@@ -358,7 +459,7 @@ Report problems to rt-other@ccbb.utexas.edu''')
 
     # Handle allocation defaults
     # if not results.allocation:
-    #     results.allocation = mega2014 # os.environ.get('ALLOCATION')
+    #     results.allocation = os.environ.get('ALLOCATION')
     
     # Check for required parameters
     # if results.name == None:
@@ -399,12 +500,12 @@ Report problems to rt-other@ccbb.utexas.edu''')
             print 'Not sending start/stop email.'
     
     
-    host = subprocess.check_output("hostname").split('.')[1]
+    host = subprocess.check_output(["hostname", "-f"]).split('.')[1]
 
     if not results.launcher:
         if host == "ls4":
             results.launcher = '{}.sge'.format(results.name)
-        elif host == "stampede":
+        elif host in ["stampede", "ls5"]:
             results.launcher = '{}.slurm'.format(results.name)
         else:
             results.launcher
@@ -416,6 +517,8 @@ Report problems to rt-other@ccbb.utexas.edu''')
         generate_lonestar_launcher(results, launcher_file)
     elif host == "stampede":
         generate_stampede_launcher(results, launcher_file)
+    elif host == "ls5":
+        generate_ls5_launcher(results, launcher_file)
     else:
         generate_generic_launcher(results, launcher_file)
 
@@ -424,7 +527,7 @@ Report problems to rt-other@ccbb.utexas.edu''')
     if results.submit_cmd:
         print results.launcher
     else:
-        if host == "stampede":
+        if host in ["stampede", "ls5"]:
             print 'Launcher successfully created. Type "sbatch {}" to queue your job.'.format(results.launcher)
         else:
             print 'Launcher successfully created. Type "qsub {}" to queue your job.'.format(results.launcher)
