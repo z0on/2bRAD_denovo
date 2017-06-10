@@ -1,12 +1,9 @@
-#! /usr/bin/perl
+#!/usr/bin/env perl
 use strict;
 use warnings;
 use Bio::SeqIO;
 
 my $usage="
-
-Converts VCF format to dadi data format
-(requires bioperl)
 
 Usage: perl vcf2dadi.pl <genome file> <vcf file> <list file>
 
