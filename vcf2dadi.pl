@@ -1,25 +1,23 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Bio::SeqIO;
+#use Bio::SeqIO;
 
 my $usage="
 
-Usage: perl vcf2dadi.pl <genome file> <vcf file> <list file>
+Usage: perl vcf2dadi.pl <vcf file> <list file>
 
 Genome file is in fasta format;
 List file gives population designations, like this:
 
-BEGIN
 sample1    population1
 sample2    population1
 sample3    population2
-END
 
 ";
 
-if (!$ARGV[2]) { die $usage;}
-my ($file,$vcf,$list)=@ARGV;
+if (!$ARGV[1]) { die $usage;}
+my ($vcf,$list)=@ARGV;
 
 my %list;
 open(IN,"< $list")||die"$!";
@@ -34,6 +32,7 @@ close IN;
 my %vcf;
 my %pop;
 my %record;
+my @chroms;
 open(IN,"< $vcf");
 while (<IN>) {
     chomp;
@@ -49,6 +48,7 @@ while (<IN>) {
     }
     my @a=split(/\s+/);
     my ($chr,$pos,$ref,$alt)=($a[0],$a[1],$a[3],$a[4]);
+    push @chroms, $chr unless (" @chroms "=~/ $chr /);
     next if($alt=~/,/);
 
     $vcf{$chr}{$pos}{ref}=$ref;
@@ -99,12 +99,11 @@ foreach my $pop(sort keys %pop){
 }
 $title.="\tGene\tPostion\n";
 print O "$title";
-my $fa=Bio::SeqIO->new(-file=>$file,-format=>'fasta');
-while(my $seq=$fa->next_seq){
-    my $id=$seq->id;
-    my $seq=$seq->seq;
+#print "@chroms\n";
+# my $fa=Bio::SeqIO->new(-file=>$file,-format=>'fasta');
+foreach my $id (@chroms){
     foreach my $pos (sort {$a<=>$b} keys %{$vcf{$id}}){
-        my $ref=substr($seq,$pos-2,3);
+        my $ref="AAA";
         my $line="$ref\t$ref\t$vcf{$id}{$pos}{ref}";
         foreach my $pop(sort keys %pop){
             my $num=$vcf{$id}{$pos}{$pop}{a1};
