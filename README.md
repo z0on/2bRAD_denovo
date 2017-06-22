@@ -24,7 +24,7 @@ This repository contains the lab protocol for sample preparation, as well as scr
 - quality assessment based on replicates.
 
 Also included are walkthroughs for analysis (2brad_analysis.txt):
-- principal component analysis and outlier detection using *adagenet* package in R
+- principal component analysis and outlier detection using *adegenet* package in R
 - computing Weir and Cockerham Fst
 - BayeScan
 - ADMIXTURE
