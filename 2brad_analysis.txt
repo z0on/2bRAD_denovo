@@ -1,0 +1,168 @@
+#==================================================
+#     2bRAD : PCA, Fst, ADMIXTURE, Bayescan
+#==================================================
+
+# first of all, explore data and identify outliers using PCA
+
+# create samples to pops table:
+grep '#CHROM' thinMaxaf.vcf | perl -pe 's/\t/\n/g' | tail -n +10 | perl -pe 's/^(\S)(.+)/$1$2\t$1/' > inds2pops
+
+# scp thinMaxaf.vcf and inds2pops to laptop
+
+# use PCA_adegenet.R to make PCA plot
+
+# outliers (for example): K4, O5, O166
+# let's remove them using vcftools
+
+echo 'K4
+O5
+O166
+K3
+O3'>outliers 
+
+vcftools --vcf thinMaxaf.vcf --remove outliers --recode --out maxaf2
+mv maxaf2.recode.vcf maxaf.vcf
+
+#===================================================
+ Population differentiation and structure
+#===================================================
+
+#-----------------------
+# Computing Fst between pops
+
+# create lists of Orpheus (starting with O) and Keppels (K) samples, names O.pop and K.pop
+# based on names of .trim files that are now in your rad directory, using ls and perl -pe commands
+ls K*.trim | perl -pe 's/\..+//' | perl -pe 's/2b_//g' >K.pop
+ls O*.trim | perl -pe 's/\..+//' >O.pop
+
+vcftools --vcf maxaf.vcf --weir-fst-pop K.pop --weir-fst-pop O.pop
+# Weir and Cockerham weighted Fst estimate: 0.01
+
+#-------------
+# ADMIXTURE
+#-------------
+
+# installing ADMIXTURE
+cd ~/bin/
+wget https://www.genetics.ucla.edu/software/admixture/binaries/admixture_linux-1.23.tar.gz --no-check-certificate
+tar vxf admixture_linux-1.23.tar.gz 
+mv admixture_linux-1.23/admixture .
+cd -
+
+# installing plink 1.09:
+cd ~/bin
+wget https://www.cog-genomics.org/static/bin/plink170531/plink_linux_x86_64.zip
+unzip plink_linux_x86_64.zip
+cd -
+
+# creating a dataset with fake "chr" chromosome designations
+# for reference-based:
+cat maxaf.vcf | perl -pe 's/gi\S+\t(\d)(\d+)/chr$1\t$1$2/' >thinMaxChrom.vcf
+# for denovo:
+cat maxaf.vcf | perl -pe 's/tag(\d)(\d+)\t(\d+)/chr$1\t$3$2/'>thinMaxChrom.vcf
+
+# reformatting VCF into plink binary BED format
+plink --vcf thinMaxChrom.vcf --make-bed --out rads
+
+# ADMIXTURE with cross-validation to select K 
+# (bash script to run admixture with several different K's)
+for K in 1 2 3 4; do admixture --cv rads.bed $K | tee log${K}.out; done
+
+# minimal cross-validation error = optimal K
+grep -h CV log*.out
+
+# for plotting:
+# listing individuals from new vcf file
+grep '#CHROM' maxaf.vcf | perl -pe 's/\t/\n/g' | tail -n +10 | perl -pe 's/^(\S)(.+)/$1$2\t$1/' > inds2pops
+
+# scp the *.Q and inds2pops to laptop, plot it in R:
+tbl=read.table("rads.2.Q")
+barplot(t(as.matrix(tbl)), col=rainbow(5),xlab="Individual #", ylab="Ancestry", border=NA)
+
+# or, more fancy, use admixturePlotting_V3.R
+
+#===================================================
+# Bayescan
+
+wget http://cmpg.unibe.ch/software/BayeScan/files/BayeScan2.1.zip
+
+# install PGDspider (to reformat VCF to bayescan format) on lonestar:
+cd ~/bin
+wget http://www.cmpg.unibe.ch/software/PGDSpider/PGDSpider_2.0.7.1.zip
+unzip PGDSpider_2.0.7.1.zip
+cd -
+
+# creating populations file
+grep "#CHR" maxaf.vcf | perl -pe 's/\s+/\n/g' | grep -E "^[OK][i1-9]" | \
+perl -pe 's/^(([OK]).+)/$1\t$2/' > pops
+
+#-------------
+#-------------
+# BayeScan: searching for Fst outliers
+
+# installing bayescan
+wget http://cmpg.unibe.ch/software/BayeScan/files/BayeScan2.1.zip
+unzip BayeScan2.1.zip 
+cd BayeScan2.1/
+cd source
+make
+cp bayescan_2.1 ~/bin
+
+# converting vcf to bayescan format
+# creating configuration file for PDGspider
+
+nano vcf2bayescan.spid
+# paste this:
+
+############
+# VCF Parser questions
+PARSER_FORMAT=VCF
+
+# Do you want to include a file with population definitions?
+VCF_PARSER_POP_QUESTION=true
+# Only input following regions (refSeqName:start:end, multiple regions: whitespace separated):
+VCF_PARSER_REGION_QUESTION=
+# What is the ploidy of the data?
+VCF_PARSER_PLOIDY_QUESTION=DIPLOID
+# Only output following individuals (ind1, ind2, ind4, ...):
+VCF_PARSER_IND_QUESTION=
+# Output genotypes as missing if the read depth of a position for the sample is below:
+VCF_PARSER_READ_QUESTION=
+# Take most likely genotype if "PL" or "GL" is given in the genotype field?
+VCF_PARSER_PL_QUESTION=true
+# Do you want to exclude loci with only missing data?
+VCF_PARSER_EXC_MISSING_LOCI_QUESTION=false
+# Select population definition file:
+VCF_PARSER_POP_FILE_QUESTION=./pops
+# Only output SNPs with a phred-scaled quality of at least:
+VCF_PARSER_QUAL_QUESTION=
+# Do you want to include non-polymorphic SNPs?
+VCF_PARSER_MONOMORPHIC_QUESTION=false
+# Output genotypes as missing if the phred-scale genotype quality is below:
+VCF_PARSER_GTQUAL_QUESTION=
+
+# GESTE / BayeScan Writer questions
+WRITER_FORMAT=GESTE_BAYE_SCAN
+
+# Specify which data type should be included in the GESTE / BayeScan file  (GESTE / BayeScan can only analyze one data type per file):
+GESTE_BAYE_SCAN_WRITER_DATA_TYPE_QUESTION=SNP
+############
+
+# converting thinned biallelic vcf to bayescan format
+echo "java -Xmx1024m -Xms512m -jar ~/bin/PGDSpider_2.0.7.1/PGDSpider2-cli.jar -inputfile maxaf.vcf -outputfile snp.bayescan -spid vcf2bayescan.spid " >convert
+launcher_creator.py -j convert -n conv -a mega2014 -e matz@utexas.edu -t 0:30:00 -q normal
+sbatch conv.slurm
+
+echo 'bayescan_2.1 snp.bayescan -threads=24' >bs
+launcher_creator.py -j bs -n bs -q normal -w 1 -t 3:00:00 -a mega2014 -e matz@utexas.edu
+sbatch bs.slurm
+
+# this one takes a few hours
+
+removeBayescanOutliers.pl bayescan=snp.baye_fst.txt vcf=maxaf.vcf FDR=0.5 >maxaf_nobs.vcf
+
+# Now, repeat ADMIXTURE analysis for this new file (maxaf_nobs.vcf)
+
+
+
+
