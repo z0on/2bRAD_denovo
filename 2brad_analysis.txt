@@ -57,9 +57,9 @@ cd -
 
 # creating a dataset with fake "chr" chromosome designations
 # for reference-based:
-cat maxaf.vcf | perl -pe 's/gi\S+\t(\d)(\d+)/chr$1\t$1$2/' >thinMaxChrom.vcf
+cat thinMaxaf.vcf | perl -pe 's/gi\S+\t(\d)(\d+)/chr$1\t$1$2/' >thinMaxChrom.vcf
 # for denovo:
-cat maxaf.vcf | perl -pe 's/tag(\d)(\d+)\t(\d+)/chr$1\t$3$2/'>thinMaxChrom.vcf
+cat thinMaxaf.vcf | perl -pe 's/tag(\d)(\d+)\t(\d+)/chr$1\t$3$2/'>thinMaxChrom.vcf
 
 # reformatting VCF into plink binary BED format
 plink --vcf thinMaxChrom.vcf --make-bed --out rads
@@ -148,8 +148,8 @@ WRITER_FORMAT=GESTE_BAYE_SCAN
 GESTE_BAYE_SCAN_WRITER_DATA_TYPE_QUESTION=SNP
 ############
 
-# converting thinned biallelic vcf to bayescan format
-echo "java -Xmx1024m -Xms512m -jar ~/bin/PGDSpider_2.0.7.1/PGDSpider2-cli.jar -inputfile maxaf.vcf -outputfile snp.bayescan -spid vcf2bayescan.spid " >convert
+# converting vcf to bayescan format
+echo "java -Xmx1024m -Xms512m -jar ~/bin/PGDSpider_2.0.7.1/PGDSpider2-cli.jar -inputfile final.vcf -outputfile snp.bayescan -spid vcf2bayescan.spid " >convert
 launcher_creator.py -j convert -n conv -a mega2014 -e matz@utexas.edu -t 0:30:00 -q normal
 sbatch conv.slurm
 
@@ -159,10 +159,13 @@ sbatch bs.slurm
 
 # this one takes a few hours
 
-removeBayescanOutliers.pl bayescan=snp.baye_fst.txt vcf=maxaf.vcf FDR=0.5 >maxaf_nobs.vcf
+removeBayescanOutliers.pl bayescan=snp.baye_fst.txt vcf=final.vcf FDR=0.5 >final_nobs.vcf
 
-# Now, repeat ADMIXTURE analysis for this new file (maxaf_nobs.vcf)
+# repeat ADMIXTURE analysis for this new file (final_nobs.vcf)
+thinner.pl vcf=final_nobs.vcf criterion=maxAF >thinMaxaf.vcf
+# and repeat lines 58-82 above
 
+# use final_nobs.vcf for moments (AFS) analysis:  
 
 
 

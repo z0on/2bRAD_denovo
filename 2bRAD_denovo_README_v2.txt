@@ -396,9 +396,6 @@ retabvcf.pl vcf=final.recode.vcf tab=cdh_alltags_cc.tab >final.vcf
 # thinning for Fst / PCA / ADMIXTURE  (choosing one SNP per tag with max allele frequency):
 thinner.pl vcf=final.vcf criterion=maxAF >thinMaxaf.vcf
 
-# thinning for dadi / moments (one SNP per tag, chosen randomly)
-thinner.pl  vcf=final.vcf criterion=random >thinRandom.vcf
-
 #######################################
 #   DONE, move to 2brad_analysis.txt
 #######################################

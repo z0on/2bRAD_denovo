@@ -17,7 +17,7 @@ sample3    population2
 ";
 
 if (!$ARGV[1]) { die $usage;}
-my ($vcf,$list)=@ARGV;
+my ($VCF,$list)=@ARGV;
 
 my %list;
 open(IN,"< $list")||die"$!";
@@ -32,8 +32,9 @@ close IN;
 my %vcf;
 my %pop;
 my %record;
+my %crec;
 my @chroms;
-open(IN,"< $vcf");
+open(IN,"< $VCF");
 while (<IN>) {
     chomp;
     next if(/^##/);
@@ -41,14 +42,18 @@ while (<IN>) {
         my @a=split(/\s+/);
         for(my $i=9;$i<@a;$i++){
             next if(!exists $list{$a[$i]});
-            #die"$a[$i] does not exists in $list\n" if(!exists $list{$a[$i]});
+#            die"$a[$i] does not exists in $list\n" if(!exists $list{$a[$i]});
             $record{$i}=$list{$a[$i]};
         }
         next;
     }
     my @a=split(/\s+/);
     my ($chr,$pos,$ref,$alt)=($a[0],$a[1],$a[3],$a[4]);
-    push @chroms, $chr unless (" @chroms "=~/ $chr /);
+    if (!$crec{$chr}) {
+	    push @chroms, $chr;
+	    $crec{$chr}=1;
+#print "@chroms\n-----\n";
+	}
     next if($alt=~/,/);
 
     $vcf{$chr}{$pos}{ref}=$ref;
@@ -88,7 +93,9 @@ while (<IN>) {
 }
 close IN;
 
-open(O,"> $list.data");
+$VCF=~s/\..+//;
+my $outname=$VCF."_dadi.data";
+open(O,"> $outname");
 my $title="NAME\tOUT\tAllele1";
 foreach my $pop(sort keys %pop){
     $title.="\t$pop";
@@ -99,11 +106,10 @@ foreach my $pop(sort keys %pop){
 }
 $title.="\tGene\tPostion\n";
 print O "$title";
-#print "@chroms\n";
-# my $fa=Bio::SeqIO->new(-file=>$file,-format=>'fasta');
 foreach my $id (@chroms){
+#print "chrom $id...\n";
     foreach my $pos (sort {$a<=>$b} keys %{$vcf{$id}}){
-        my $ref="AAA";
+        my $ref="A".$vcf{$id}{$pos}{ref}."A";
         my $line="$ref\t$ref\t$vcf{$id}{$pos}{ref}";
         foreach my $pop(sort keys %pop){
             my $num=$vcf{$id}{$pos}{$pop}{a1};
