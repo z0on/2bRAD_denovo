@@ -20,11 +20,11 @@ matching=[float] required fraction of matching genotypes
 
 missing=[float]  allowed fraction of missing genotypes, default 0.25
 
-altPairs=2       minimal number of matching genotypes involving non-reference alleles. 
+altPairs=1       minimal number of matching genotypes involving non-reference alleles. 
 
-hetPairs=0       minimal number of matching heterozygotes. 
+hetPairs=1       minimal number of matching heterozygotes. 
 
-max.het=0.75     maximum fraction of heterozygotes among non-missing genotypes
+max.het=0.5     maximum fraction of heterozygotes among non-missing genotypes
                  (guards against lumped paralogous loci).
 
 polyonly=[1|0]   extract only polymorphic sites. Default 0.
@@ -40,8 +40,8 @@ my $missing=0.25;
 my $fmatch=1;
 #my $allalts=0;
 my $maxhet=0.75;
-my $hetPairs=0;
-my $altPairs=2;
+my $hetPairs=1;
+my $altPairs=1;
 my $polyonly=0;
 
 if ("@ARGV"=~/vcf=(\S+)/) { $vcf=$1;}

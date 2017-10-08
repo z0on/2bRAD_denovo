@@ -82,7 +82,7 @@ while (<VCF>) {
 		next;
 	}
 	$info=$dats[7];
-	if ($info=~/AF=(\S*?)[:;]/) { $af=$1; } else { warn "no AF:\n@dats\n" and next;}
+	if ($info=~/AF=([\d\.]*?)/) { $af=$1; } else { warn "no AF:\n@dats\n" and next;}
 	if ($info=~/DP=(\d*?);/) { $dp=$1; } else { warn "no DP:\n@dats\n" and next;}
 	if ($af>0.5) { $af=1-$af; }
 	if (($pos-$pos0 < $inter) and ($chrom eq $chrom0)){
