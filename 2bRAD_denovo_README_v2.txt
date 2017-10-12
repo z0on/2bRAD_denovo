@@ -44,7 +44,7 @@ head -50 O9.fq | grep -E "^[ATGCN]+$"
 
 # creating a file of commands to run (assuming reads are in fastq files, one file 
 # per sample. Combine read files from multiple lanes for the same sample using ngs_concat.pl)
-2bRAD_trim_launch.pl fastq > trims
+2bRAD_trim_launch_dedup.pl fastq > trims
 
 # NB: use this command instead of the one above if you have 2bRAD libraries without 
 # degenerate tag but with 4-base in-line barcode:
