@@ -149,11 +149,11 @@ foreach $seq (@seqs) {
 	my @cts=split(",",pop @{$dstring{$seq}});
 	my @inds=split(",", pop @{$dstring{$seq}});
 	if ($#inds+1<$minind) {
-warn "\t$seq: toofew in ",$#inds+1," individuals; skipping (min $minind, max $maxind)\n";
+#warn "\t$seq: toofew in ",$#inds+1," individuals; skipping (min $minind, max $maxind)\n";
 		next; 
 	}
 	elsif ($#inds+1>$maxind) {
-warn "\t$seq: toomany in ",$#inds+1," individuals; skipping (min $minind, max $maxind)\n";
+#warn "\t$seq: toomany in ",$#inds+1," individuals; skipping (min $minind, max $maxind)\n";
                 next;
 	}	
 #warn "$seq inds: @inds\n";
