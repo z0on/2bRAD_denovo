@@ -148,7 +148,7 @@ foreach $seq (@seqs) {
 	print FAS ">$fahead\n$seq\n";
 	my @cts=split(",",pop @{$dstring{$seq}});
 	my @inds=split(",", pop @{$dstring{$seq}});
-	if ($#inds+1<=$minind | $#inds+1>=$maxind) { next; }
+	if ($#inds+1<$minind | $#inds+1>$maxind) { next; }
 #warn "$seq inds: @inds\n";
 #warn "$seq counts: @cts\n";
 	my @ctall=();
