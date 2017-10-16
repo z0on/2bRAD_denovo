@@ -148,7 +148,14 @@ foreach $seq (@seqs) {
 	print FAS ">$fahead\n$seq\n";
 	my @cts=split(",",pop @{$dstring{$seq}});
 	my @inds=split(",", pop @{$dstring{$seq}});
-	if ($#inds+1<$minind | $#inds+1>$maxind) { next; }
+	if ($#inds+1<$minind) {
+warn "\t$seq: toofew in ",$#inds+1," individuals; skipping (min $minind, max $maxind)\n";
+		next; 
+	}
+	elsif ($#inds+1>$maxind) {
+warn "\t$seq: toomany in ",$#inds+1," individuals; skipping (min $minind, max $maxind)\n";
+                next;
+	}	
 #warn "$seq inds: @inds\n";
 #warn "$seq counts: @cts\n";
 	my @ctall=();
