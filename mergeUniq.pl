@@ -7,11 +7,15 @@ Merges individual uniqued files produced by uniquerOne.pl into one table.
 
 arg1: common extension of uniqued files 
 minDP=[integer] minimum sequencing depth to consider a uniqie tag. Default 5.
+minInd=[integer] minimum number of individuals the tag must be seen in. Default 2.
+maxInd=[integer] maximum number of individuals the tag must be seen in. Default - 
+                 total number of individuals. Set this to twice per-pop sample 
+                 size for tag sharing analysis.
 
 prints to STDOUT
 
 Example:
-mergeUniq.pl uni >mydataMerged.uniq
+mergeUniq.pl \"trim.uni\" minDP=5 minInd=5 maxInd=40 >mydataMerged.uniq
 
 ";
 
@@ -29,11 +33,16 @@ sub rcom {
 }
 
 my $mincount=5;
+my $minind=2;
 if ("@ARGV"=~/minDP=(\d+)/) { $mincount=$1;}
+if ("@ARGV"=~/minInd=(\d+)/) { $minind=$1;}
 
 $glob=shift or die $usage;
 opendir THIS, ".";
 @ins=grep /\.$glob$/,readdir THIS;
+
+my $maxind=$#ins+1;
+if ("@ARGV"=~/maxInd=(\d+)/) { $maxind=$1;}
 
 my $tag;
 my $tot1;
@@ -139,6 +148,7 @@ foreach $seq (@seqs) {
 	print FAS ">$fahead\n$seq\n";
 	my @cts=split(",",pop @{$dstring{$seq}});
 	my @inds=split(",", pop @{$dstring{$seq}});
+	if ($#inds+1<$minind | $#inds+1>$maxind) { next; }
 #warn "$seq inds: @inds\n";
 #warn "$seq counts: @cts\n";
 	my @ctall=();
