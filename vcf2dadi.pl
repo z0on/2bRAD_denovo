@@ -65,7 +65,7 @@ while (<IN>) {
 #       print "$indv\t";
         my $geno=$a[$i];
 #       print "$geno\t";
-        $geno=~/^(.)[\/\|](.):/;
+        $geno=~/^(.)[\/\|](.)/;
         my $tempa=$1;
         my $tempb=$2;
 #       print "$tempa $tempb\n";
