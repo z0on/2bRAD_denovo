@@ -9,7 +9,7 @@ import sys
 infile=sys.argv[1]
 pop_ids=[sys.argv[2]]
 projections=[int(sys.argv[3])]
-outname=pop_ids[0]+"_sfs"
+outname=pop_ids[0]+"_sfs_folded"
 
 dd = Misc.make_data_dict(infile)
 data = Spectrum.from_data_dict(dd, pop_ids,projections,polarized=False)
