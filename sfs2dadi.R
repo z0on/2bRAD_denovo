@@ -28,7 +28,6 @@ infile=sub("infiles=","", commandArgs()[infile])
 prefix =grep("prefix=",commandArgs())
 if (length(prefix)==0) { prefix="out" } else { prefix=sub("prefix=","", commandArgs()[prefix]) }
 
-infile="sfss"
 ins=as.character(read.table(infile)[,1])
 fi=read.table(ins[1],sep="\t")
 coord=paste(fi[,1],fi[,2],sep=".")
