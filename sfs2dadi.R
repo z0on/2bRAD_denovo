@@ -45,7 +45,7 @@ for (inn in ins) {
 	coord0=paste(chr,pos,sep=".")
 	if (sum(coord0!=coord)!=0) { stop ("incompatible sfs: they must be generated for the SAME sites in all pops (use -rf option when calling angsd)") }
 	sfs=sfs[,-c(1,2)]
-	sfs=10^sfs
+	sfs=exp(sfs)
 	cts=c()
 	for(i in 1:nrow(sfs)) {
 		cts=append(cts,sample(1:ncol(sfs)-1,1,prob=sfs[i,]/sum(sfs[i,])))

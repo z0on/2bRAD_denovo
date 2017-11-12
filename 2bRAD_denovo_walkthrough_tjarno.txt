@@ -2,7 +2,6 @@
 November 2, 2017
 
 BEFORE STARTING, replace, in this whole file:
-	- yourUserName with your user name
 	- matz@utexas.edu by your actual email;
 	- cmonstr with your TACC user name.
 
@@ -20,23 +19,31 @@ make install
 
 # adding the program directory to $PATH
 cd
-nano .bash_profile
-	export PATH=$HOME/bin/vcftools/bin:PATH
+nano .bashrc
+	export PATH=$HOME/bin/vcftools/bin:$PATH
 	# press ctl-O, Enter, ctl-X
 
 re-login to make PATH changes take effect
 
 ------- moments: 
 
+cd
 git clone https://bitbucket.org/simongravel/moments.git 
 cd moments
 python setup.py build_ext --inplace
+
+# add this to .bashrc, section 2:
+  export PYTHONPATH=$PYTHONPATH:$HOME/moments
+# re-login
+
+cds
+cd RAD
 
 ------- ANGSD: 
 
 # install xz first from https://tukaani.org/xz/
 cd
-wget https://tukaani.org/xz/xz-5.2.3.tar.gz
+wget https://tukaani.org/xz/xz-5.2.3.tar.gz --no-check-certificate
 tar vxf xz-5.2.3.tar.gz 
 cd xz-5.2.3/
 ./configure --prefix=$HOME/xz-5.2.3/
@@ -70,13 +77,14 @@ nano .bashrc
    export PATH=$HOME/angsd/misc:$PATH
 # save (Ctl-O, Ctl-X)
 
-------- fastNGSadmix :
+-------  ngsTools (incl. ngsCovar) :
 
-cd
-git clone https://github.com/e-jorsboe/fastNGSadmix.git
-cd fastNGSadmix 
+cd ~/bin
+git clone https://github.com/mfumagalli/ngsPopGen.git
+cd ngsPopGen
 make
-cp fastNGSadmix ~/bin
+mv ngs* ..
+cd -
 
 -------  NGSadmix :
 cd ~/bin/
@@ -88,6 +96,7 @@ cd -
 
 # project page: https://sites.google.com/site/jpopgen/stairway-plot
 cdw
+get version from June 2016 (v2beta)
 wget https://www.dropbox.com/s/tj4i02n36abwjl6/stairway_plot_v0.2.zip?dl=0
 mv file stairway_plot_v0.2.zip
 unzip stairway_plot_v0.2.zip
@@ -148,16 +157,21 @@ ssh yourUserName@ls5.tacc.utexas.edu
 
 # downloading and installing de-novo 2bRAD scripts in HOME/bin
 cd
-mkdir bin # make bin directory
-cd bin # go there
+mkdir bin 
+cd ~/bin 
 # cloning github repository
 git clone https://github.com/z0on/2bRAD_denovo.git
-mv 2bRAD_denovo/* . # move it to here from sub-directory
-rm -rf 2bRAD_denovo # remove now-empty directory
+# move it to here from sub-directory
+mv 2bRAD_denovo/* . 
+# remove now-empty directory
+rm -rf 2bRAD_denovo 
+cds
+cd RAD
 
 # designating all .pl and .py files (perl and pythin scripts) as executable
 chmod +x *.pl 
 chmod +x *.py
+chmod +x *.R
 
 # does it work?
 # try running a script from $HOME:
@@ -166,9 +180,7 @@ cd
 # if you get "command not found" something is wrong! 
 
 #============================
-# downloading and preparing the data 
-
-# downloading the data (A.millepora from Orpheus and Keppels)
+# trimming and filtering (TJARNO: SKIP THIS SECTION until next === line)
 
 # making a directory to work in, and going in there:
 cds
@@ -176,7 +188,7 @@ mkdir RAD
 cd RAD
 
 # downloading data from the shared directory
-cp /work/01211/cmonstr/lonestar/tjarno/* .
+cp /work/01211/cmonstr/lonestar/Tjarno/*.fastq .
 
 # Trimming the reads
 # How does this work? run the trim-launcher script without arguments:
@@ -187,10 +199,11 @@ head -50 IB14KIE14_S86_L004_R1_001_trunc.fastq | grep -E "^[ATGCN]+$"
 
 # now for actual trimming and renaming of the files
 # creating a file of commands to run:
-
 2bRAD_trim_launch.pl fastq sampleID=1 >trims
+
 # creating a job script:
 launcher_creator.py -j trims -n trims -a mega2014 -t 0:10:00 -e matz@utexas.edu
+
 # submitting it to TACC:
 sbatch trims.slurm
 
@@ -212,6 +225,8 @@ grep @D00 *IB14ESP05*.fastq | wc -l
 grep @D00 IB14ESP05.tr0 | wc -l
 
 # DO IT YOURSELF: how do the reads look after trimming? (modify the 'head -50 ...' command above...)
+launcher_creator.py -j filt0 -n filt0 -a mega2014 -t 0:10:00 -e matz@utexas.edu
+
 
 # quality filtering using fastx_toolkit
 # creating a list of filtering commands:
@@ -235,13 +250,22 @@ ll *.trim | wc -l
 
 # now the read pre-processing is all done! time for genotyping.
 
-#########################################################
-# GENOTYPING
+#============================
+# extracting unique tags
+
+# getting trimmed, filtered data
+cp /work/01211/cmonstr/Tjarno/*.trim .
 
 # 'uniquing' individual trimmed fastq files:
+# step one: create a long list of commands to run in parallel, out of list of files, using 'perl -pe' substitutor:
 ls *.trim | perl -pe 's/^(.+)$/uniquerOne.pl $1 >$1\.uni/' >unii
+# step 2: creating a launcher script for these
 launcher_creator.py -j unii -n uni1 -a mega2014 -t 0:10:00 -e matz@utexas.edu
+# step 3: submitting the job to the cluster:
 sbatch uni1.slurm
+
+# check how the job is doing:
+squeue -u cmonstr
 
 # Done! do you have .uni for all your samples?... 
 ll *.uni | wc -l  
@@ -249,13 +273,14 @@ ll *.uni | wc -l
 # how does it look? Let'l display entries from 49,960 to 50,000 :
 head -5000 IB14ESP05.trim.uni | tail -40
 
-# merging uniqued files :
-#  collecting tags found in at least 5 and at most 20 individuals for tag sharing analysis:
+# merging uniqued files:
+# again, a three-stage process even though we only have one command to run
+# For tag sharing analysis: collecting tags found in at least 5 and at most 50 individuals :
 echo "mergeUniq.pl uni minDP=5 minInd=5 maxInd=50 >5to50.uniq" > mer 
 launcher_creator.py -j mer -n mjob -a mega2014 -t 0:30:00 -e matz@utexas.edu
 sbatch mjob.slurm
 
-# merging nearly all tags (found in at least 2 individuals)  for actual genotyoing
+# collecting nearly all tags (found in at least 2 individuals) for actual genotyping
 echo "mergeUniq.pl uni minDP=5 minInd=2 >all.uniq" > mer2 
 launcher_creator.py -j mer2 -n mjob2 -a mega2014 -q normal -t 0:30:00 -e matz@utexas.edu
 sbatch mjob2.slurm
@@ -266,53 +291,49 @@ head -2000 all.uniq | tail -200 | less -S
 
 # how many different kinds of reads we have 
 cat all.uniq | wc -l 
-# 624816
 cat 5to20.uniq | wc -l 
-363445
 
 # discarding reads that have more than 7 observations without reverse-complement
+# (do it yourself: calculate random chance that this will happen!)
 head -1 5to50.uniq >5to50.tab
-cat 5to50.uniq | awk '!($3>7 && $4==0)' >>5to20.tab
+awk '!($3>7 && $4==0)' 5to50.uniq >>5to50.tab
 
 head -1 all.uniq >all.tab
-cat all.uniq | awk '!($3>7 && $4==0)' >>all.tab
+awk '!($3>7 && $4==0)' all.uniq >>all.tab
 
-# re-creating all-fasta file based on filtered tags
+# creating fasta file out of merged and filtered tags:
 awk '{print ">"$1"\n"$2}' all.tab | tail -n +3 > all.fasta
 
-# scp 5to50.uniq file to your laptop for tag-sharing analysis (in R)
+# scp 5to50.tab file to your laptop for tag-sharing analysis (in R, script tagSharing.R)
 
 #===============================
-#  de-novo genotyping
+#  actual DE-NOVO GENOTYPING using "fake reference genome" or "reads-derived reference": 
 
-# Which alleles belong to the same loci?
-# clustering allowing for up to 3 mismatches (-c 0.91); the most abundant sequence becomes reference
+# Which alleles (tags) belong to the same loci?
+# clustering tags allowing for up to 3 mismatches (-c 0.91); the most abundant sequence becomes reference
 cd-hit-est -i all.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.91 -M 0 -T 0
 
 # do we have new huge cdh_alltags files created?
 # list the newest 10 files in the directory:
 ll -t | head
 
-#------------
 # making fake reference genome (of 30 chromosomes) out ot cd-hit cluster representatives
 
 concatFasta.pl fasta=cdh_alltags.fas num=30
 
 # from here on, all the procedures are the same as when mapping to a reference genome
 
-# formatting the fake genome
+# formatting / indexing the genome
 export GENOME_FASTA=cdh_alltags_cc.fasta
 export GENOME_DICT=cdh_alltags_cc.dict 
 bowtie2-build $GENOME_FASTA $GENOME_FASTA
 samtools faidx $GENOME_FASTA
 java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
 
-#------------------
 # mapping to the (fake) reference genome and creating BAM files
-
 export GENOME_FASTA=cdh_alltags_cc.fasta
 
-# creating list of commands put of file list using perl -pe
+# creating list of commands out of file list using 'perl -pe'
 ls *trim | perl -pe 's/(\S+)/bowtie2 --no-unal -x \$GENOME_FASTA -U $1 -S $1\.sam/' > bt2
 launcher_creator.py -j bt2 -n maps -t 0:30:00 -a mega2014 -e matz@utexas.edu
 sbatch maps.slurm
@@ -323,7 +344,7 @@ tail -100 maps.e*
 # what does this line do?
 ls *.sam > sams
 
-# next stage is compressing, sorting and indexing the sam files (they become bam files)
+# next stage is compressing, sorting and indexing the SAM files (so they become BAM files)
 export GENOME_FASTA=cdh_alltags_cc.fasta
 cat sams | perl -pe 's/(\S+)\.sam/samtools import \$GENOME_FASTA $1\.sam $1\.unsorted\.bam && samtools sort -o $1\.sorted\.bam $1\.unsorted\.bam && java -Xmx5g -jar \$TACC_PICARD_DIR\/picard\.jar AddOrReplaceReadGroups INPUT=$1\.sorted\.bam OUTPUT=$1\.bam RGID=group1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$1 && samtools index $1\.bam/' >s2b
 launcher_creator.py -j s2b -n s2b -t 0:05:00 -a mega2014 -e matz@utexas.edu
@@ -332,130 +353,178 @@ sbatch s2b.slurm
 rm *sorted*
 ls *bam | wc -l  # should be the same number as number of trim files
 
+# BAM files are the input into various genotype calling / popgen programs, this is the main interim result of the analysis - save them for your own data
+
 #==========================
-# ANDSD => PCA, admixture
+# "FUZZY genotyping" with ANGSD - without calling actual genotypes but working with genotype likelihoods at each SNP. Optimal for low-coverage data (<10x).
+
+# install ANGSD first (see Installations section above)
+
+# PCA and Admixture are not supposed to be run on data that contain clones (genotyping replicates); we need to list all our bams and then manually remove all the paired "b" filenames:
+ls *bam >bams
+nano bams
+# remove paired "b" and "B" replicates (Ctl-K), save
 
 # open interactive session
 idev
 
-# Generating genotype likelihoods from highly confident SNPs
-# -GL 1 : samtools likelihood model
-# -doGlf 2 : beagle format
-# -doGeno 32 : binary genotype likelihoods format
-# -doMajorMinor 1 : infer major and minor alleles from data (not from reference)
+# Generating genotype likelihoods from highly confident (non-sequencing-error) SNPs
+# ANGSD parameters to use:
 
+# ALWAYS record your filter settings and explore different combinations to confirm that results are robust. 
+# Our filters will be:
+# -minMapQ 30 only highly unique mappings
+# -minQ 30 only highly confident base calls
+# -minInd 50 the site must be genotyped in at least 50 individuals (set this to at least 80% of your total number of your individuals 
+# -snp_pval 1e-5 high confidence that the SNP is not just sequencing error 
+# -minMaf 0.05 only common SNPs, with allele frequency 0.05 or more.
+# Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
 FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5"
-GENOME_FASTA=cdh_alltags_cc.fasta
-DOS="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doPost 1 -doGlf 2"
-ls *bam >bams
-# nano bam file, manually remove extra clones => bams_noclones
 
-angsd -b bams_noclones -GL 1 $FILTERS $DOS -P 40 -out 3pops_noclones
+# things we want ANGSD to do: 
+# -GL 1 : samtools likelihood model
+# -doGlf 2 : output beagle format (for admixture)
+# -doGeno 32 : binary genotype likelihoods format (for ngsCovar => PCA)
+# -doMajorMinor 1 : infer major and minor alleles from data (not from reference)
+DOS="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doPost 1 -doGlf 2"
+angsd -b bams -GL 1 $FILTERS $DOS -P 40 -out 3pops
 
 # how many SNPs?
-NSITES=`zcat 3pops_noclones.beagle.gz | wc -l`
+NSITES=`zcat 3pops.beagle.gz | wc -l`
 echo $NSITES
 # 18428
 
 # covariance matrix for PCA (if coverage is approximately equal across samples):
-gunzip 3pops_noclones.geno.gz
-ngsCovar -probfile 3pops_noclones.geno -outfile noclones.covar -nind 61 -nsites $NSITES -call 0 -norm 0 
+gunzip 3pops.geno.gz
+ngsCovar -probfile 3pops.geno -outfile 3pops.covar -nind 61 -nsites $NSITES -call 0 -norm 0 
 
-# if coverage is unequal, use 3pops_noclones.covMat and 3pops_noclones.ibsMat from angsd run
+# if coverage is very low and/or unequal, use 3pops.covMat and 3pops.ibsMat from angsd run for PCoA and PCA. In fact, using these results would be conservative in any case.
 
-#  ADMIXTURE for K from 2 to 5
+# ADMIXTURE for K from 2 to 5
 for K in `seq 2 5` ; 
 do 
-NGSadmix -likes 3pops_noclones.beagle.gz -K $K -P 10 -o 3pops_noclones_k${K};
+NGSadmix -likes 3pops.beagle.gz -K $K -P 10 -o 3pops_k${K};
 done
 
-scp all the *noclones* files to laptop
+# scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R and admixturePlotting_v4.R to plot PCA and ADMIXTURE
 
 #==========================
 # ANDSD => SFS for demographic analysis
+
+# first, manually edit file bams in nano to remove all replicates (files with index b or B if there is a corresponding A file), save as bams_noclones
 
 # enter interactive session
 idev
 
 # creating list of SNP sites for SFS, for all pops:
-# running ANGSD without snp_pval and with minMaf filter set to ignore singletons (normally, there would be no minMaf filter but here we did not remove PCR duplicates 
+# running ANGSD without snp_pval and with minMaf filter set to get only variants seen in more than one individual (AF>1/2N) (normally, there would be no minMaf filter but here we did not remove PCR duplicates so we cannot rely on read coverage statistics for would-be singletons)
 # using stronger -minInd filter
 
 FILTERS="-minMapQ 30 -minQ 30 -minInd 50 -minMaf 0.02 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5"
  DOS="-doMajorMinor 1 -doMaf 1"
 angsd -b bams_noclones -GL 1 $FILTERS $DOS -P 48 -out sfsSites
 
-# extracting list of sites to work with
-zcat sfsSites.mafs.gz | cut -f 1,2 | tail -n +2 | sort -k 1,1 -k 2,2n | perl -pe 's/\s/:/' >sites2do
+# extracting and sorting list of sites to make the SFS out of for all pops
+zcat sfsSites.mafs.gz | perl -pe 's/chr//'| cut -f 1,2 | tail -n +2 | sort -k 1,1n -k 2,2n | perl -pe 's/\s/:/' | perl -pe 's/^(.)/chr$1/' > sites2do
 
 # exit interactive session
 exit
 
 # how many sites?
 cat sites2do | wc -l
-33791
 
 # making lists of bam files for each pop
 grep KIE bams_noclones >kie
 grep RAU bams_noclones >rau
 grep ESP bams_noclones >esp
 
+# the next job takes ~45min
 # unfolded (for moments)
 echo 'angsd -b kie -rf sites2do -GL 1 -doSaf 1 -anc cdh_alltags_cc.fasta -P 1 -out kie
 angsd -b esp -rf sites2do -GL 1 -doSaf 1 -anc cdh_alltags_cc.fasta -P 1 -out esp
 angsd -b rau -rf sites2do -GL 1 -doSaf 1 -anc cdh_alltags_cc.fasta -P 1 -out rau' >sfs0
-launcher_creator.py -j sfs0 -n sfs0 -t 1:00:00 -a mega2014 -e matz@utexas.edu
+launcher_creator.py -j sfs0 -n sfs0 -t 2:00:00 -a mega2014 -e matz@utexas.edu
 sbatch sfs0.slurm
 
-# printing sfs probabilities
-realSFS print kie.saf.idx >kie.sfs
-realSFS print rau.saf.idx >rau.sfs
-realSFS print esp.saf.idx >esp.sfs
+realSFS print kie.saf.idx > kie.sfs
+realSFS print esp.saf.idx > esp.sfs
+realSFS print rau.saf.idx > rau.sfs
 
-# making dadi-SNP counts table based on probabilities
+# making dadi-SNP counts table based on genotype probabilities
 ls *.sfs >sfss
-Rscript sfs2dadi.R infiles=sfss  prefix=3pops
+Rscript ~/bin/sfs2dadi.R infiles=sfss  prefix=3pops
+
+# exporting folded 1d-sfs out of dadi-SNP format
+dadi2sfs_fold.py 3pops_dadi.data kie 40
+dadi2sfs_fold.py 3pops_dadi.data esp 40
+dadi2sfs_fold.py 3pops_dadi.data rau 42
 
 #-----------------
 # 2d AFS analysis using moments
-# install moments (python package)
+
+# install moments (python package, see the beginning of this file)
 
 # get Misha's moments scripts collection
 cd
 git clone https://github.com/z0on/AFS-analysis-with-moments.git
+chmod +x AFS-analysis-with-moments/*
 mv AFS-analysis-with-moments/* ~/bin
 rm -rf AFS-analysis-with-moments 
+cds
+cd RAD
 
 # NB: must mask singletons and private alleles during SFS analysis! 
 
-# print 2d SFS for kie and rau:
-python 2dAFS_fold.py 3pops_dadi.data kie rau 40 42
+# interactive session
+idev
 
-# S2M model for kie and rau (nu1, nu2, T, m12, m21 = params):
-python S2M_fold.py 3pops_dadi.data kie rau 40 42 1 1 1 1 1
+# print 2d SFS:
+2dAFS_fold.py 3pops_dadi.data kie rau 40 42
+2dAFS_fold.py 3pops_dadi.data esp rau 40 42
+2dAFS_fold.py 3pops_dadi.data kie esp 40 40
+2dAFS.py 3pops_dadi.data kie rau 40 42
+2dAFS.py 3pops_dadi.data esp rau 40 42
+2dAFS.py 3pops_dadi.data kie esp 40 40
+
+
+#scp *.pdf files to laptop, look at them
+
+# S2M model for kie and rau, masking singletons (nu1, nu2, T, m12, m21 = params):
+# paste this same command 20 times in the text file in nano, create and launch parallel job from it using launcher_creator.py (as before). 
+S2M_fold_masked.py 3pops_dadi.data kie rau 40 42 1 1 1 1 1
 
 # IM2 model for kie and rau (nu1_0,nu2_0,nu1,nu2,T,m12,m21 = params):
-python IM2_fold.py 3pops_dadi.data kie rau 40 42 1 1 1 1 1 1 1
+IM2_fold_masked.py 3pops_dadi.data kie rau 40 42 4 7 4 7 13 2.5 0.7
+
+#-----------------
+# 5 more populations!
+
+cp /work/01211/cmonstr/lonestar/Tjarno/5pops.zip .
 
 #-----------------
 
 # stairway plot: historical population sizes for ESP
+# (must install stairwayPlot first, and replace $WORK/stairway_plot_v2beta/stairway_plot_es below with your own path to stairway_plot files
 
-(ignoring singletons - because of no deduplication, conservative)
+(ignoring singletons)
 
 realSFS esp.saf.idx >esp_sfs
 cat esp_sfs
 3759.234804 5082.773410 4901.517283 2725.871576 1952.031534 1325.980506 1176.750821 941.780456 567.845373 817.837276 401.409512 984.552254 16.381838 644.826881 61.597748 565.959387 2.839908 442.083707 94.392939 113.486667 218.516297 82.584333 87.582359 11.942078 0.002080 69.575571 4.658302 0.000226 0.000962 43.606802 0.079898 0.001061 10.795316 0.000000 24.617357 4.025453 47.096118 37.027363 59.100985 69.955557 50.678000 
 
-# copy last 
+cat esp_sfs_folded
+41 
+6537 6078 4625 3291 2351 1800 1347 1094 949 810 734 641 573 491 436 384 418 364 343 336 189 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+# copy non-zero entries except the first one 
 nano esp.blueprint
 #example blueprint file
 #input setting
 popid: ESP # id of the population (no white space)
 nseq: 40 # number of sequences
-L: 500000 # total number of observed nucleic sites, including polymorphic and monomorphic
+L: 700000 # total number of observed nucleic sites, including polymorphic and monomorphic
 whether_folded: true # whethr the SFS is folded (true or false)
-SFS: 5082.773410 4901.517283 2725.871576 1952.031534 1325.980506 1176.750821 941.780456 567.845373 817.837276 401.409512 984.552254 16.381838 644.826881 61.597748 565.959387 2.839908 442.083707 94.392939 113.486667 218.516297 82.584333 87.582359 11.942078 0.002080 69.575571 4.658302 0.000226 0.000962 43.606802 0.079898 0.001061 10.795316 0.000000 24.617357 4.025453 47.096118 37.027363 59.100985 69.955557
+SFS: 6078 4625 3291 2351 1800 1347 1094 949 810 734 641 573 491 436 384 418 364 343 336 189
 #smallest_size_of_SFS_bin_used_for_estimation: 2 # default is 1; to ignore singletons, change this number to 2
 #largest_size_of_SFS_bin_used_for_estimation: # default is n-2; to ignore singletons, change this number to nseq-2
 pct_training: 0.67 # percentage of sites for training
@@ -478,9 +547,13 @@ fontsize: 12 # Font size
 java -cp $WORK/stairway_plot_v2beta/stairway_plot_es Stairbuilder esp.blueprint 
 grep swarmops esp.blueprint.sh > addTheta
 launcher_creator.py -j addTheta -n at -e matz@utexas.edu -a tagmap -t 0:15:00 -q normal
+
 nano at.slurm
+# add:
 #SBATCH -N 18
+
 sbatch at.slurm
+
 grep -v swarmops esp.blueprint.sh >movesPlots
 bash movesPlots
 
@@ -490,7 +563,7 @@ scp ESP/*.summary* to laptop
 
 #        G  A  T  K
 
-# (use only for high-coverage data, >10x after deduplication)
+# ("hard-call" genotyping, use only for high-coverage data, >10x after deduplication)
 
 export GENOME_REF=cdh_alltags_cc.fasta
 ls *.bam > bams
@@ -612,7 +685,7 @@ thinner.pl vcf=final.recode.vcf criterion=maxAF >thinMaxaf.vcf
 10581 loci selected
 
 #----------
-# ADMIXTURE
+# ADMIXTURE using hard-call data (vcf)
 
 # creating a dataset with fake "chr" chromosome designations
 cat thinMaxaf.vcf | perl -pe 's/tag(\d)(\d+)\t(\d+)/chr$1\t$3$2/'>thinMaxChrom.vcf
