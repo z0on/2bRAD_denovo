@@ -1,0 +1,106 @@
+INSTALLATIONS (work on lonestar5 as of Nov 10, 2017):
+
+------ vcftools: 
+
+git clone https://github.com/vcftools/vcftools.git 
+./autogen.sh
+./configure --prefix=$HOME/bin/vcftools
+make
+make install
+
+# adding the program directory to $PATH
+cd
+nano .bashrc
+	export PATH=$HOME/bin/vcftools/bin:$PATH
+	# press ctl-O, Enter, ctl-X
+
+re-login to make PATH changes take effect
+
+------- moments: 
+
+cd
+git clone https://bitbucket.org/simongravel/moments.git 
+cd moments
+python setup.py build_ext --inplace
+
+# add this to .bashrc, section 2:
+  export PYTHONPATH=$PYTHONPATH:$HOME/moments
+# re-login
+
+cds
+cd RAD
+
+------- ANGSD: 
+
+# install xz first from https://tukaani.org/xz/
+cd
+wget https://tukaani.org/xz/xz-5.2.3.tar.gz --no-check-certificate
+tar vxf xz-5.2.3.tar.gz 
+cd xz-5.2.3/
+./configure --prefix=$HOME/xz-5.2.3/
+make
+make install
+
+# edit .bashrc:
+nano .bashrc
+   export LD_LIBRARY_PATH=$HOME/xz-5.2.3/lib:$LD_LIBRARY_PATH
+   export LIBRARY_PATH=$HOME/xz-5.2.3/lib:$LIBRARY_PATH
+   export C_INCLUDE_PATH=$HOME/xz-5.2.3/include:$C_INCLUDE_PATH
+logout
+# re-login
+
+# now, install htslib:
+cd
+git clone https://github.com/samtools/htslib.git
+cd htslib
+make CFLAGS=" -g -Wall -O2 -D_GNU_SOURCE -I$HOME/xz-5.2.3/include"
+
+cd
+git clone https://github.com/ANGSD/angsd.git 
+cd angsd
+make HTSSRC=../htslib
+
+# now adding ANGSD to $PATH
+cd
+nano .bashrc
+# section 2:
+   export PATH=$HOME/angsd:$PATH
+   export PATH=$HOME/angsd/misc:$PATH
+# save (Ctl-O, Ctl-X)
+
+-------  ngsTools (incl. ngsCovar) :
+
+cd ~/bin
+git clone https://github.com/mfumagalli/ngsPopGen.git
+cd ngsPopGen
+make
+mv ngs* ..
+cd -
+
+-------  NGSadmix :
+cd ~/bin/
+wget popgen.dk/software/download/NGSadmix/ngsadmix32.cpp 
+g++ ngsadmix32.cpp -O3 -lpthread -lz -o NGSadmix
+cd -
+
+-------  stairwayPlot :
+
+# project page: https://sites.google.com/site/jpopgen/stairway-plot
+cdw
+get version from June 2016 (v2beta)
+wget https://www.dropbox.com/s/tj4i02n36abwjl6/stairway_plot_v0.2.zip?dl=0
+mv file stairway_plot_v0.2.zip
+unzip stairway_plot_v0.2.zip
+
+-------  ADMIXTURE
+cd ~/bin/
+wget https://www.genetics.ucla.edu/software/admixture/binaries/admixture_linux-1.23.tar.gz --no-check-certificate
+tar vxf admixture_linux-1.23.tar.gz 
+mv admixture_linux-1.23/admixture .
+cd -
+
+-------  plink 1.9:
+cd ~/bin
+wget https://www.cog-genomics.org/static/bin/plink171103/plink_linux_x86_64.zip
+unzip plink_linux_x86_64.zip
+cd -
