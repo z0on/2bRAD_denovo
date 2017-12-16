@@ -111,110 +111,73 @@ wget https://www.cog-genomics.org/static/bin/plink171103/plink_linux_x86_64.zip
 unzip plink_linux_x86_64.zip
 cd -
 
-=============================================
-# Setting workspace (loading modules, setting $PATH to where the scripts are going to live)
-# this might be specific to TACC clusters, check with your sysadmin how it works on yours
-
-cd
-nano .bashrc
-
-# in Section 1, paste:
-
-  module load launcher
-  module load java
-  module load cd-hit
-  module load fastx_toolkit
-  module load samtools
-  module load bowtie
-  module load picard-tools
-  module load gatk
-  module load python
-  module load Rstats
-
-# in Section 2, paste:
- 
-   export PATH=$HOME/bin:$PATH
-
-# Ctl-o, Ctl-X
-
-logout
-# re-login
-
 ==============================================
-OK LET'S DO IT!
 
-The idea is to copy the chunks separated by empty lines below and paste them into your cluster 
-terminal window consecutively. 
-
-The lines beginning with hash marks (#) are explanations and additional instructions - 
-please make sure to read them before copy-pasting. 
-
-
-# login to cluster
-ssh yourUserName@ls5.tacc.utexas.edu
-
-# downloading and installing de-novo 2bRAD scripts in HOME/bin
+# downloading and installing all 2bRAD scripts in $HOME/bin (or change to whatever directory you want)
 cd
 mkdir bin 
 cd ~/bin 
-# cloning github repository
+# cloning github repositories
 git clone https://github.com/z0on/2bRAD_denovo.git
-# move it to here from sub-directory
+git clone https://github.com/z0on/2bRAD_GATK.git
+# move scripts to ~/bin from sub-directories
 mv 2bRAD_denovo/* . 
+mv 2bRAD_GATK/* . 
 # remove now-empty directory
 rm -rf 2bRAD_denovo 
-cds
-cd RAD
+rm -rf 2bRAD_GATK 
 
 # designating all .pl and .py files (perl and python scripts) as executable
 chmod +x *.pl 
 chmod +x *.py
 chmod +x *.R
 
+# adding ~/bin to your $PATH 
+cd
+nano .bashrc
+# paste this where appropriate (note: .bashrc configuration might be specific to your cluster, consult your sysadmin if in doubt)
+   export PATH=$HOME/bin:$PATH
+
+# Ctl-o, Ctl-o  (to save and exit in nano)
+# log out and re-login to make sure .bashrc changes took effect
+
 # does it work?
 # try running a script from $HOME:
 cd
 2bRAD_trim_launch.pl
-# if you get "command not found" something is wrong! 
+# if you get "command not found" something is wrong 
 
 # ==============================================
 #      Genome reference placement (if you have it)
 
+# will need bowtie2, samtools, and picard. They are pre-installed as modules on TACC; you will have to install them if you don't have these modules on your cluster. 
+module load perl
+module load bowtie
+module load samtools
+module load picard-tools
 
-# assuming we have a fasta file mygenome.fasta
+# assuming we have a fasta file mygenome.fasta and it lives in the directory $WORK/db
 
 export GENOME_FASTA=$WORK/db/mygenome.fasta
 export GENOME_DICT=$WORK/db/mygenome.dict 
-module load perl
-module load bowtie
 
 # indexing genome for bowtie2 mapper
 bowtie2-build $GENOME_FASTA $GENOME_FASTA
 
-module load samtools
 samtools faidx $GENOME_FASTA
 
-module load picard-tools
 export GENOME_DICT=$WORK/db/mygenome.dict 
 java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
 
-
-# assuming we have 2bRAD reads(latest protocol version) in multiple *.faastq files;
-# if samples were spread across several lanes, we will need to concatenate them first
-ngs_concat.pl fastq 
-
-# this creates concatenated files with extension fq
-
 #==================
-
 # Step 1: Splitting by in-read barcode, deduplicating and quality-filtering the reads
 
 # creating a file of commands to run (assuming reads are in fastq files, one file per sample.
-# (if samples were spread across several lanes, concatenate them first
+# (if samples were spread across several lanes, concatenate them first using 
 ngs_concat.pl) 
 2bRAD_trim_launch_dedup.pl fastq > trims
 
-# NB: use this command instead of the one above if you have 2bRAD libraries without degenerate tag but with 4-base in-line barcode:
+# Note: use this command instead of the one above if you have 2bRAD libraries without degenerate tag but with 4-base in-line barcode:
 2bRAD_trim_launch.pl fastq barcode2=4 > trims
 # And if you have the original-style libraries without degenerate tag and without in-line barcode, use this:
 2bRAD_trim_launch.pl fastq > trims
@@ -222,17 +185,17 @@ ngs_concat.pl)
 # (resulting in poor quality at restriction site and adaptor bases) and you have used BcgI enzyme, use this:
 2bRAD_trim_launch_dedup2.pl fastq > trims
 
-# now we have a long list of commands, one per fastq file, that we will need to execute preferably simultaneously if we are on a multi-core cluster. TACC uses LAUNCHER module to enable parallele launch of multiple commands: https://github.com/TACC/launcher 
-# I very highly recommend it - it should work on any SLURM system and makes the best usee of cluster architecture. If you don't have SLURM cluster, just say 
+# the file trims now contains a long list of commands, one per fastq file, that we will need to execute. TACC uses Launcher module to enable parallele launch of multiple commands: https://github.com/TACC/launcher 
+# I very highly recommend it - it should work on any SLURM-based system. Otherwise, if you don't know how to run hundreds of parallel jobs on your cluster, consult your IT support - there must be a way. 
+# If push comes to shove, you can always execute all these commands serially (one by one), by saying 
 bash trims
-# to execute all commands one by one.
 
 # do we have expected number of *.tr0 files created?
 ls -l *.tr0 | wc -l
 
-# quality filtering using fastx_toolkit
+# quality filtering using fastx_toolkit (install fastx_toolkit if you don't have this module)
 module load fastx_toolkit
-ls *.tr0 | perl -pe 's/^(\S+)\.tr0$/cat $1\.tr0 \| fastq_quality_filter -q 20 -p 90 >$1\.trim/' >filt0
+ls *.tr0 | perl -pe 's/^(\S+)\.tr0$/cat $1\.tr0 \| fastq_quality_filter -q 20 -p 100 >$1\.trim/' >filt0
 
 # NOTE: run the next line ONLY if your qualities are 33-based 
 # (if you don't know just try to see if it works eventually, if you get errors from fastx_toolkit, try the other one):
@@ -240,7 +203,7 @@ ls *.tr0 | perl -pe 's/^(\S+)\.tr0$/cat $1\.tr0 \| fastq_quality_filter -q 20 -p
 #if you did NOT run the line above, run this one (after removing # symbol):
 #	mv filt0 filt
 
-# execute all commands in filt0 file (serial or parallel using Launcher, if your system allows) 
+# execute all commands in filt file (serial or parallel using Launcher, if your system allows) 
 
 # do we have expected number of *.trim files created?
 ls -l *.trim | wc -l
@@ -263,7 +226,7 @@ mergeUniq.pl uni minDP=2 minInd=2 >mydataMerged.uniq
 # Done! how many reads went into analysis?
 tail mer.e*
 
-# discarding reads that have more than 7 observations without reverse-complement
+# discarding tags that have more than 7 observations without reverse-complement
 head -1 all.uniq >all.tab
 awk '!($3>7 && $4==0)' all.uniq >>all.tab
 
@@ -272,12 +235,7 @@ awk '{print ">"$1"\n"$2}' all.tab | tail -n +3 > all.fasta
 
 # clustering reads into loci using cd-hit
 # clustering allowing for up to 3 mismatches (-c 0.91); the most abundant sequence becomes reference
-cd-hit-est -i mergedUniqTags.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.91 -M 0 -T 0 # 
-
-# UNLESS you are working on TACC, edit these accordingly and execute:
-export TACC_GATK_DIR=/where/gatk/is/installed/
-export TACC_PICARD_DIR=/where/picard/is/installed/
-# NOTE that you will have to execute the above two lines every time you re-login (put them into your .bashrc ?)
+cd-hit-est -i all.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.91 -M 0 -T 0  
 
 #------------
 # making fake reference genome (of 8 chromosomes) out ot cd-hit cluster representatives
@@ -333,19 +291,20 @@ ls *bam | wc -l  # should be the same number as number of trim files
 # listing all bam filenames
 ls *bam >bams
 
-# Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); manually remove them from bams list.
+# Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); manually remove them from bams list. If you want to detect clones, however, do keep the replicates and analyse identity-by-state (IBS) matrix (explained below)
 
 # Generating genotype likelihoods from highly confident (non-sequencing-error) SNPs
 
 # F I L T E R S :
 # (ALWAYS record your filter settings and explore different combinations to confirm that results are robust. )
 # Suggested filters :
-# -minMapQ 30 only highly unique mappings
-# -minQ 30 only highly confident base calls
-# -minInd 50 the site must be genotyped in at least 50 individuals (note: set this to at least 80% of your total number of your individuals)
-# -snp_pval 1e-5 high confidence that the SNP is not just sequencing error 
-# -minMaf 0.05 only common SNPs, with allele frequency 0.05 or more.
+# -minMapQ 30 : only highly unique mappings
+# -minQ 30 : only highly confident base calls
+# -minInd 50 : the site must be genotyped in at least 50 individuals (note: set this to at least 80% of your total number of your individuals)
+# -snp_pval 1e-5 : high confidence that the SNP is not just sequencing error 
+# -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more.
 # Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
+# also adding  filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation) and sites with really bad strand bias:
 FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5"
 
 # T O   D O : 
@@ -356,7 +315,7 @@ FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minInd 50 -snp_pval 
 # -makeMatrix 1 -doIBS 1 -doCov 1 : identity-by-state and covariance matrices based on single-read resampling (robust to variation in coverage across samples)
 TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doPost 1 -doGlf 2"
 
-# -P is number fo parallel processes. Funny but in many cases angsd runs faster on -P 1
+# Starting angsd with -P the number fo parallel processes. Funny but in many cases angsd runs faster on -P 1
 angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
 
 # how many SNPs?
@@ -367,20 +326,20 @@ echo $NSITES
 gunzip myresult.geno.gz
 ngsCovar -probfile myresult.geno -outfile myresult.covar -nind 61 -nsites $NSITES -call 0 -norm 0 
 
-# if coverage is very low and/or unequal, use myresult.covMat and myresult.ibsMat from angsd run for PCoA and PCA. In fact, using these results would be conservative in any case.
+# if coverage is highly unequal among samples, use myresult.covMat and myresult.ibsMat from angsd run for PCoA and PCA. In fact, using these results would be conservative in any case.
 
 # ADMIXTURE for K from 2 to 5
 for K in `seq 2 5` ; 
 do 
-NGSadmix -likes myresult.beagle.gz -K $K -P 10 -o 3pops_k${K};
+NGSadmix -likes myresult.beagle.gz -K $K -P 10 -o mydata_k${K};
 done
 
-# scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R and admixturePlotting_v4.R to plot PCA and ADMIXTURE
+# scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
 
 #==========================
 # ANDSD => SFS for demographic analysis
 
-# assuming all clones and replicates were removed from bams file list:
+# assuming all clones and replicates were removed from bams file:
 
 # creating list of SNP sites for SFS, for all pops:
 # running ANGSD without snp_pval and minMaf filters, to get rare alleles 
@@ -391,7 +350,7 @@ FILTERS="-minMapQ 30 -minQ 30 -minInd 60 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -s
 TODO="-doMajorMinor 1 -doMaf 1"
 angsd -b bams -GL 1 $FILTERS $DOS -P 1 -out sfsSites
 
-# extracting and sorting list of sites to make the SFS out of for all pops
+# extracting and sorting list of filter-passing sites to make the SFS out of:
 zcat sfsSites.mafs.gz | perl -pe 's/chr//'| cut -f 1,2 | tail -n +2 | sort -k 1,1n -k 2,2n | perl -pe 's/\s/:/' | perl -pe 's/^(.)/chr$1/' > sites2do
 
 # how many sites?
@@ -403,7 +362,7 @@ cat sites2do | wc -l
 export GENOME_FASTA=cdh_alltags_cc.fasta
 # for reference-based:
 export GENOME_FASTA=mygenome.fasta
-
+# (note: these jobs take quite a long time, about an hour with 20,000 sites)
 angsd -b pop1 -rf sites2do -GL 1 -doSaf 1 -anc $GENOME_FASTA -P 1 -out pop1
 angsd -b pop2 -rf sites2do -GL 1 -doSaf 1 -anc $GENOME_FASTA -P 1 -out pop2
 angsd -b pop3 -rf sites2do -GL 1 -doSaf 1 -anc $GENOME_FASTA -P 1 -out pop3
@@ -417,7 +376,7 @@ realSFS print pop3.saf.idx > pop3.saf
 ls *.saf >safs
 Rscript sfs2dadi.R infiles=safs  prefix=3pops
 
-# exporting folded 1d-sfs out of dadi-SNP format
+# exporting folded 1d-sfs out of dadi-SNP format (change numbers to 2x number of samples per population)
 dadi2sfs_fold.py 3pops_dadi.data pop1 40
 dadi2sfs_fold.py 3pops_dadi.data pop2 40
 dadi2sfs_fold.py 3pops_dadi.data pop3 42
@@ -430,25 +389,23 @@ dadi2sfs_fold.py 3pops_dadi.data pop3 42
 # get Misha's moments scripts collection
 git clone https://github.com/z0on/AFS-analysis-with-moments.git
 
-# print folded 2d SFS - for denovo or if mapping to genome of the studied species
+# print folded 2d SFS - for denovo or when mapping to genome of the studied species
 # (change numbers to 2x number of samples for in each pop):
 2dAFS_fold.py 3pops_dadi.data pop1 pop2 40 42
 
-# print unfolded 2d SFS - if mapping was to genome of sister species
+# print unfolded 2d SFS - if mapping to genome of sister species
 # (change numbers to 2x number of samples for in each pop):
 2dAFS.py 3pops_dadi.data pop1 pop2 40 42
 
-#scp *.pdf files to laptop, look at them
-
 # S2M model for pop1 and pop2 
-# numbers are 2x number of samples for in each pop, and then starting values of parameters : nu1, nu2, T, m12, m21, fraction of misidentified ancestral states (for unfolded). Parameters will be perturbed each time so runs will be different
+# numbers are 2x number of samples for in each pop, and then starting values of parameters: nu1, nu2, T, m12, m21, and fraction of misidentified ancestral states (for unfolded). Parameters will be perturbed each time so all runs will be different
 # run this same command 20 or more times to ensure convergence: 
 S2M.py 3pops_dadi.data pop1 pop2 40 42 1 1 1 1 1 0.01
 # folded (for denovo):
 S2M_fold.py 3pops_dadi.data pop1 pop2 40 42 1 1 1 1 1
 
-# Folded IM2 model for pop1 and pop2 (nu1_0,nu2_0,nu1,nu2,T,m12,m21):
-IM2_fold_masked.py 3pops_dadi.data pop1 pop2 40 42 1 1 1 1 1 1 1
+# Folded IM2 model for pop1 and pop2 (parameters: nu1_0,nu2_0,nu1,nu2,T,m12,m21):
+IM2_fold.py 3pops_dadi.data pop1 pop2 40 42 1 1 1 1 1 1 1
 
 #==========================
 
@@ -456,6 +413,16 @@ IM2_fold_masked.py 3pops_dadi.data pop1 pop2 40 42 1 1 1 1 1 1 1
 
 # ("hard-call" genotyping, use only for high-coverage data, >10x after deduplication)
 
+# invoke modules (skip if using your own installations)
+module load gatk
+module load picard-tools
+
+# UNLESS you are working on TACC, edit these accordingly and execute:
+export TACC_GATK_DIR=/where/gatk/is/installed/
+export TACC_PICARD_DIR=/where/picard/is/installed/
+# NOTE that you will have to execute the above two lines every time you re-login (put them into your .bashrc ?)
+
+# (see above about formatting of the reference genome)
 export GENOME_REF=mygenome.fasta
 ls *.bam > bams
 
