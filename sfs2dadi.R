@@ -3,19 +3,19 @@ if (length(commandArgs(trailingOnly=TRUE))<1) {
 	
 Converts a series to ANGSD's sfs files to a dadi-format counts table
 (generates counts by sampling according to probabilities for each site)
+All sfs files must be generated for the same sites ( -rf option in ANGSD)
 
 arguments: 
 
 infiles=[filename]   list of per-population sfs files (one file per line), 
                     generated with \'realSFS mypop.saf.idx > mypop.sfs\'
-                    
 prefix=[string]     prefix for _dadi.data output file
 
 maxsnp=1e+10	max number of SNPs to process
 
 example:
 
-sfs2dadi infiles=sfs.list prefix=mycreatures maxsnp=1000000
+sfs2dadi infiles=sfs.list prefix=mycreatures
    
 Mikhail Matz, matz@utexas.edu
 
@@ -41,23 +41,25 @@ for (inn in ins) {
 	sfs=read.table(inn,sep="\t")
 	if (inn==ins[1]){
 		coord=paste(sfs[,1],sfs[,2],sep=".")
-#		message(paste("   coord/maxsnp:",length(coord),maxsnp))
+		message(paste("   coord/maxsnp:",length(coord),maxsnp))
 		if (length(coord)>maxsnp) { coord=coord[1:maxsnp] }
 		dadi0=matrix(nrow=length(coord),ncol=length(ins))
+		row.names(dadi0)=coord
 		dimnames(dadi0)=list(coord,ins)
 		dadi1=dadi0
 		ns=2*length(ins)
 	}
 	sfs=sfs[1:length(coord),]
-	message (paste(nrow(sfs),"SNPs, minutes elapsed:",round(proc.time()[3]/60,1)))
+	message (paste(nrow(sfs),"SNPs",round(proc.time()[3]/60,1)))
 
 	chr=sfs[,1]
 	pos=sfs[,2]
 	coord0=paste(chr,pos,sep=".")
-	sfs=sfs[coord %in% coord0,]
-	dadi1=dadi1[coord %in% coord0,]
-	dadi0=dadi0[coord %in% coord0,]
+	row.names(sfs)=coord0
 	coord=coord[coord %in% coord0]
+	sfs=sfs[coord,]
+	dadi1=dadi1[coord,]
+	dadi0=dadi0[coord,]
 	if (inn!=ins[1]) { message(length(coord)," overlapping sites left")}
 #	if (sum(coord0!=coord)!=0) { stop ("incompatible sfs: they must be generated for the SAME sites in all pops (use -rf option when calling angsd)") }
 	sfs=sfs[,-c(1,2)]
@@ -82,3 +84,4 @@ dadi=data.frame(cbind(NAME,OUT,Allele1,dadi0,Allele2,dadi1,Gene,Position))
 names(dadi)=sub("\\.sfs|\\.sfs\\.1|\\.1","",names(dadi))
 
 write.table(dadi,file=paste(prefix,"dadi.data",sep="_"),sep="\t",row.names=FALSE,quote=FALSE)
+
