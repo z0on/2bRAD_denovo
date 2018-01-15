@@ -22,7 +22,7 @@ nano .bashrc
 
 re-login to make PATH changes take effect
 
-------- moments: 
+------- Moments: 
 
 cd
 git clone https://bitbucket.org/simongravel/moments.git 
@@ -270,6 +270,10 @@ export GENOME_FASTA=mygenome.fasta
 # what are mapping efficiencies? 
 cat maps.e*
 
+# find out mapping efficiency for a particular input file (O9.fastq in this case)
+# (assuming all input files have different numbers of reads)
+grep -E '^[ATGCN]+$' O9.fastq | wc -l | grep -f - maps.e* -A 4 
+
 ls *.bt2.sam > sams
 cat sams | wc -l  # number should match number of trim files
 
@@ -302,14 +306,15 @@ ls *bam >bams
 # -minQ 30 : only highly confident base calls
 # -minInd 50 : the site must be genotyped in at least 50 individuals (note: set this to at least 80% of your total number of your individuals)
 # -snp_pval 1e-5 : high confidence that the SNP is not just sequencing error 
-# -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more.
+# -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more. Consider raising this to 0.1 for population structure analysis.
 # Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
-# also adding  filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation) and sites with really bad strand bias:
+# also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation) and sites with really bad strand bias:
 FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5"
 
-# T O   D O : 
+# THINGS FOR ANGSD TO DO : 
 # -GL 1 : samtools likelihood model
 # -doGlf 2 : output beagle format (for admixture)
+# -doPost 1 : output posterior allele frequencies based on HWE prior
 # -doGeno 32 : binary genotype likelihoods format (for ngsCovar => PCA)
 # -doMajorMinor 1 : infer major and minor alleles from data (not from reference)
 # -makeMatrix 1 -doIBS 1 -doCov 1 : identity-by-state and covariance matrices based on single-read resampling (robust to variation in coverage across samples)
@@ -339,73 +344,52 @@ done
 #==========================
 # ANDSD => SFS for demographic analysis
 
-# assuming all clones and replicates were removed from bams file:
+# make separate files listing bams for each population (without  clones and replicates)
+# assume we have two populations, pop0 and pop1, 20 individuals each, with corresponding bams listed in pop0.bams and pop1.bams
+# estimating site frequency likelihoods for each population - no filters except by genotyping rate (minInd, minIndDepth)
+export GENOME_REF=mygenome.fasta
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minIndDepth 2"
+TODO="-doSaf 1 -anc $GENOME_REF"
+# In the following lines, set minInd to 80-90% of 2x pop sample size; i.e., if sample size is 20 set to 90%: 36)
+angsd -b pop0.bams -GL 1 -P 1 -minInd 36 $FILTERS $TODO -out pop0
+angsd -b pop1.bams -GL 1 -P 1 -minInd 36 $FILTERS $TODO -out pop1
 
-# creating list of SNP sites for SFS, for all pops:
-# running ANGSD without snp_pval and minMaf filters, to get rare alleles 
-# but, use stronger -minInd filter (set it to at 90% of your total number of your individuals)
-# -P is number fo parallel processes. Funny but in many cases angsd runs faster on -P 1
+# generating per-population SFS
+realSFS pop0.saf.idx >pop0.sfs
+realSFS pop1.saf.idx >pop1.sfs
 
-FILTERS="-minMapQ 30 -minQ 30 -minInd 60 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5"
-TODO="-doMajorMinor 1 -doMaf 1"
-angsd -b bams -GL 1 $FILTERS $DOS -P 1 -out sfsSites
+# generating dadi-like posterior counts
+realSFS dadi pop0.saf.idx pop1.saf.idx -sfs pop0.sfs -sfs pop1.sfs -ref $GENOME_REF -anc $GENOME_REF >dadiout
 
-# extracting and sorting list of filter-passing sites to make the SFS out of:
-zcat sfsSites.mafs.gz | perl -pe 's/chr//'| cut -f 1,2 | tail -n +2 | sort -k 1,1n -k 2,2n | perl -pe 's/\s/:/' | perl -pe 's/^(.)/chr$1/' > sites2do
-
-# how many sites?
-cat sites2do | wc -l
-
-# now, make separate lists of bam files for each pop: say we have three - pop1, pop2, pop3
-
-# for de novo:
-export GENOME_FASTA=cdh_alltags_cc.fasta
-# for reference-based:
-export GENOME_FASTA=mygenome.fasta
-# (note: these jobs take quite a long time, about an hour with 20,000 sites)
-angsd -b pop1 -rf sites2do -GL 1 -doSaf 1 -anc $GENOME_FASTA -P 1 -out pop1
-angsd -b pop2 -rf sites2do -GL 1 -doSaf 1 -anc $GENOME_FASTA -P 1 -out pop2
-angsd -b pop3 -rf sites2do -GL 1 -doSaf 1 -anc $GENOME_FASTA -P 1 -out pop3
-
-# printing likelihoods of allele counts
-realSFS print pop1.saf.idx > pop1.saf
-realSFS print pop2.saf.idx > pop2.saf
-realSFS print pop3.saf.idx > pop3.saf
-
-# making dadi-SNP counts table based on genotype probabilities
-ls *.saf >safs
-Rscript sfs2dadi.R infiles=safs  prefix=3pops
-
-# exporting folded 1d-sfs out of dadi-SNP format (change numbers to 2x number of samples per population)
-dadi2sfs_fold.py 3pops_dadi.data pop1 40
-dadi2sfs_fold.py 3pops_dadi.data pop2 40
-dadi2sfs_fold.py 3pops_dadi.data pop3 42
+# converting to dadi-snp format understood by dadi an Moments:
+# (numbers after the input file name are numbers of individuals sampled per population)
+realsfs2dadi.pl dadiout 20 20 >2pops_dadi.data
 
 #=====================
-# 2d AFS analysis using moments
+# 2d AFS analysis using Moments
 
-# install moments (python package, see the beginning of this file)
+# install Moments (python package, see the beginning of this file)
 
 # get Misha's moments scripts collection
 git clone https://github.com/z0on/AFS-analysis-with-moments.git
 
 # print folded 2d SFS - for denovo or when mapping to genome of the studied species
-# (change numbers to 2x number of samples for in each pop):
-2dAFS_fold.py 3pops_dadi.data pop1 pop2 40 42
+# (change numbers to 2x 90% the number of samples for in each pop):
+2dAFS_fold.py 2pops_dadi.data pop0 pop1 36 26
 
 # print unfolded 2d SFS - if mapping to genome of sister species
 # (change numbers to 2x number of samples for in each pop):
-2dAFS.py 3pops_dadi.data pop1 pop2 40 42
+2dAFS.py 2pops_dadi.data pop0 pop1 36 36
 
-# S2M model for pop1 and pop2 
+# S2M model for pop0 and pop1 
 # numbers are 2x number of samples for in each pop, and then starting values of parameters: nu1, nu2, T, m12, m21, and fraction of misidentified ancestral states (for unfolded). Parameters will be perturbed each time so all runs will be different
 # run this same command 20 or more times to ensure convergence: 
-S2M.py 3pops_dadi.data pop1 pop2 40 42 1 1 1 1 1 0.01
+S2M.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1 0.01
 # folded (for denovo):
-S2M_fold.py 3pops_dadi.data pop1 pop2 40 42 1 1 1 1 1
+S2M_fold.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1
 
-# Folded IM2 model for pop1 and pop2 (parameters: nu1_0,nu2_0,nu1,nu2,T,m12,m21):
-IM2_fold.py 3pops_dadi.data pop1 pop2 40 42 1 1 1 1 1 1 1
+# Folded IM2 model for pop0 and pop1 (parameters: nu1_0,nu2_0,nu1,nu2,T,m12,m21):
+IM2_fold.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1 1 1
 
 #==========================
 
@@ -420,9 +404,9 @@ module load picard-tools
 # UNLESS you are working on TACC, edit these accordingly and execute:
 export TACC_GATK_DIR=/where/gatk/is/installed/
 export TACC_PICARD_DIR=/where/picard/is/installed/
-# NOTE that you will have to execute the above two lines every time you re-login (put them into your .bashrc ?)
+# NOTE that you will have to execute the above two lines every time you re-login (put them into your .bashrc)
 
-# (see above about formatting of the reference genome)
+# (see above about formatting of the reference genome - same thing here although it is a real, not reads-derived genome)
 export GENOME_REF=mygenome.fasta
 ls *.bam > bams
 

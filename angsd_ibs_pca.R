@@ -1,17 +1,17 @@
-#setwd("~/Dropbox/Documents/ecogeno2018/")
-bams=read.table("bams")[,1]
+setwd("~/Dropbox/Documents/ecogeno2018/")
+bams=read.table("bams")[,1] # list of bam files
+goods=c(1:length(bams))
 
-# reading table of pairs of replicates 
+# reading table of pairs of replicates (tab-delimited) - skip if there are no clones
 clonepairs=read.table("clonepairs.tab",sep="\t")
 repsa= clonepairs[,1]
 repsb= clonepairs[,2]
-
 # removing "b" replicates
 goods=which(!(bams %in% repsb))
 
 #--------------------
 # loading individual to population correspondences
-i2p=read.table("inds2pops",sep="\t")
+i2p=read.table("inds2pops",sep="\t") # 2-column tab-delimited table of individual assignments to populations; must be in the same order as samples in the bam list or vcf file.
 row.names(i2p)=i2p[,1]
 i2p=i2p[goods,]
 site=i2p[,2]
@@ -25,8 +25,8 @@ colpops=as.numeric(as.factor(sort(unique(site))))
 
 library(vegan)
 # choose either of the following two covarince matrices:
-co = as.matrix(read.table("myresult.covMat")) # covariance based on single-read resampling
-#co = as.matrix(read.table("myresult.covar")) # covariance based on single-read resampling
+co = as.matrix(read.table("ok.covMat")) # covariance based on single-read resampling
+#co = as.matrix(read.table("ok.covar")) # covariance by ngsCovar
 co =co[goods,goods]
 dimnames(co)=list(bams[goods],bams[goods])
 
@@ -57,7 +57,7 @@ cmd=pp0
 plot(cmd$CA$u[,axes2plot],pch=19,col=colors)
 ordispider(cmd$CA$u[,axes2plot],groups=conds$site,col="grey80")
 ordiellipse(cmd$CA$u[,axes2plot],groups= conds$site,draw="polygon",col=colpops,label=T)
-identify(cmd$CA$u[,axes2plot],labels=colnames(ma),n=n2identify,cex=0.7)
+identify(cmd$CA$u[,axes2plot],labels=colnames(co),n=n2identify,cex=0.7)
 #-------------
 # t-SNE:  machine learning to identify groups of samples 
 # based on genotypes' correlations
@@ -81,7 +81,7 @@ ordiellipse(rt$Y,groups= site,draw="polygon",col=colpops,label=T)
 # clustering / PCoA based on identity by state (IBS) based on single read resampling
 # (for low and/or uneven coverage)
 
-ma = as.matrix(read.table("myresult.ibsMat"))
+ma = as.matrix(read.table("ok.ibsMat"))
 hc=hclust(as.dist(ma),"ave")
 plot(hc,cex=0.5)  # this shows how similar clones are
 
