@@ -7,7 +7,7 @@ Generates counts table from multiple kmer fasta files produced by Jellyfish.
 
 To go from fastq to kmer counts (for one file):
 fastq_to_fasta -i mydata1.fastq -o mydata1.fasta
-jellyfish count -m [kmer length] -s 100M -t [number fo threads] -C mydata1.fasta -o mydata1.jf
+jellyfish count -m [kmer length] -s 100M -t [number of threads] -C mydata1.fasta -o mydata1.jf
 jellyfish dump mydata1.jf > mydata1_kmers.fa
 
 arg1: list of kmer fasta files
@@ -115,9 +115,6 @@ sub bycount {
 my @seqs=keys %dstring;
 @seqs= sort bycount @seqs;
 
-foreach $s (@allins){
-	$s=~s/\..+//;
-}
 
 my $globalcount=0;
 my $indexx=0;
@@ -134,7 +131,6 @@ foreach $seq (@seqs) {
 	my @ctall=();
 	my $skip=0;
 	for ($i=0;$ind=$allins[$i];$i++) {
-		$inds[$i-$skip]=~s/\..+//;
 		if ($inds[$i-$skip] eq $ind) { 
 			push @ctall, $cts[$i-$skip];
 		}

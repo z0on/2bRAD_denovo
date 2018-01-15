@@ -1,6 +1,5 @@
-#setwd('~/Dropbox/RAD_tjarno/')
+#setwd("~/Dropbox/Documents/ecogeno2018/")
 bams=read.table("bams")[,1]
-bams=sub(".trim.bam","",bams)
 
 # reading table of pairs of replicates 
 clonepairs=read.table("clonepairs.tab",sep="\t")
@@ -24,9 +23,10 @@ colpops=as.numeric(as.factor(sort(unique(site))))
 #--------------------
 # covariance / PCA 
 
+library(vegan)
 # choose either of the following two covarince matrices:
-co = as.matrix(read.table("1read.covMat")) # covariance based on single-read resampling
-co = as.matrix(read.table("fumagalli.covar")) # result of ngsCovar
+co = as.matrix(read.table("myresult.covMat")) # covariance based on single-read resampling
+#co = as.matrix(read.table("myresult.covar")) # covariance based on single-read resampling
 co =co[goods,goods]
 dimnames(co)=list(bams[goods],bams[goods])
 
@@ -51,12 +51,13 @@ ordispider(cc,choices= axes2plot,groups=conds$site,col="grey80")
 ordiellipse(cc,choices= axes2plot,groups= conds$site,draw="polygon",col=colpops,label=T)
 
 # unscaled, to identify outliers
-n2identify=5
-plot(cc,choices=axes2plot)
-points(cc$CA$u[,axes2plot],pch=19,col=colors)
-ordispider(cc$CA$u[,axes2plot],groups=conds$site,col="grey80")
-ordiellipse(cc$CA$u[,axes2plot],groups= conds$site,draw="polygon",col=colpops,label=T)
-identify(cc$CA$u[,axes2plot],labels=colnames(co),n= n2identify,cex=0.7)
+n2identify=2
+cmd=pp0
+# unscaled, to identify outliers
+plot(cmd$CA$u[,axes2plot],pch=19,col=colors)
+ordispider(cmd$CA$u[,axes2plot],groups=conds$site,col="grey80")
+ordiellipse(cmd$CA$u[,axes2plot],groups= conds$site,draw="polygon",col=colpops,label=T)
+identify(cmd$CA$u[,axes2plot],labels=colnames(ma),n=n2identify,cex=0.7)
 #-------------
 # t-SNE:  machine learning to identify groups of samples 
 # based on genotypes' correlations
@@ -67,11 +68,11 @@ library(adegenet)
 quartz()
 
 # perplexity:  expected number fo neighbors. Set to 0.5x N(samples per pop)
-perp=8
+perp=15
 rt = Rtsne(as.dist(1-cov2cor(co)), perplexity=perp,max_iter=2,is_distance=T)
 for (i in 1:250){
 	rt = Rtsne(as.dist(1-cov2cor(co)), perplexity=perp,max_iter=10,Y_init=rt$Y,is_distance=T)
-	pplot(rt$Y,col=colors,pch=16,cex=0.8,main=i*10)
+	plot(rt$Y,col=colors,pch=16,cex=0.8,main=i*10)
 }
 ordispider(rt$Y,groups=site,col="grey80",alpha=0.01)
 ordiellipse(rt$Y,groups= site,draw="polygon",col=colpops,label=T)
@@ -80,14 +81,14 @@ ordiellipse(rt$Y,groups= site,draw="polygon",col=colpops,label=T)
 # clustering / PCoA based on identity by state (IBS) based on single read resampling
 # (for low and/or uneven coverage)
 
-ma = as.matrix(read.table("1read.ibsMat"))
-dimnames(ma)=list(bams[goods],bams[goods])
+ma = as.matrix(read.table("myresult.ibsMat"))
 hc=hclust(as.dist(ma),"ave")
-plot(hc,cex=0.5)
+plot(hc,cex=0.5)  # this shows how similar clones are
 
 ma=ma[goods,goods]
+dimnames(ma)=list(bams[goods],bams[goods])
 hc=hclust(as.dist(ma),"ave")
-plot(hc,cex=0.7)
+plot(hc,cex=0.7) # without clones
 
 # performing PCoA and CAP
 conds=data.frame(cbind(site))
@@ -114,7 +115,7 @@ ordiellipse(cmd,choices= axes2plot,groups= conds$site,draw="polygon",col=colpops
 plot(cmd$CA$u[,axes2plot],pch=19,col=colors)
 ordispider(cmd$CA$u[,axes2plot],groups=conds$site,col="grey80")
 ordiellipse(cmd$CA$u[,axes2plot],groups= conds$site,draw="polygon",col=colpops,label=T)
-identify(cmd$CA$u[,axes2plot],labels=colnames(stnr2),n=3,cex=0.7)
+identify(cmd$CA$u[,axes2plot],labels=colnames(ma),n=3,cex=0.7)
 
 
 
