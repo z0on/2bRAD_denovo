@@ -138,7 +138,7 @@ nano .bashrc
 # paste this where appropriate (note: .bashrc configuration might be specific to your cluster, consult your sysadmin if in doubt)
    export PATH=$HOME/bin:$PATH
 
-# Ctl-o, Ctl-o  (to save and exit in nano)
+# Ctl-o, Ctl-x  (to save and exit in nano)
 # log out and re-login to make sure .bashrc changes took effect
 
 # does it work?
@@ -238,10 +238,10 @@ awk '{print ">"$1"\n"$2}' all.tab | tail -n +3 > all.fasta
 cd-hit-est -i all.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.91 -M 0 -T 0  
 
 #------------
-# making fake reference genome (of 8 chromosomes) out ot cd-hit cluster representatives
+# making fake reference genome (of 30 chromosomes) out ot cd-hit cluster representatives
 # need bowtie2, samtools and picard_tools for indexing
 
-concatFasta.pl fasta=cdh_alltags.fas num=8
+concatFasta.pl fasta=cdh_alltags.fas num=30
 
 # formatting fake genome
 export GENOME_FASTA=cdh_alltags_cc.fasta
@@ -272,18 +272,18 @@ cat maps.e*
 
 # find out mapping efficiency for a particular input file (O9.fastq in this case)
 # (assuming all input files have different numbers of reads)
-grep -E '^[ATGCN]+$' O9.fastq | wc -l | grep -f - maps.e* -A 4 
+grep -E '^[ATGCN]+$' O9.*trim | wc -l | grep -f - maps.e* -A 4 
 
 ls *.bt2.sam > sams
 cat sams | wc -l  # number should match number of trim files
 
-# next stage is compressing, sorting and indexing the SAM files (so they become BAM files)
+# next stage is compressing, sorting and indexing the SAM files, so they become BAM files:
 cat sams | perl -pe 's/(\S+)\.sam/samtools import \$GENOME_FASTA $1\.sam $1\.unsorted\.bam && samtools sort -o $1\.sorted\.bam $1\.unsorted\.bam && java -Xmx5g -jar \$TACC_PICARD_DIR\/picard\.jar AddOrReplaceReadGroups INPUT=$1\.sorted\.bam OUTPUT=$1\.bam RGID=group1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$1 && samtools index $1\.bam/' >s2b
 
 rm *sorted*
 ls *bam | wc -l  # should be the same number as number of trim files
 
-# BAM files are the input into various genotype calling / popgen programs, this is the main interim result of the analysis. Some examples below.
+# BAM files are the input into various genotype calling / popgen programs, this is the main interim result of the analysis. Archive them.
 
 #==========================
 
@@ -320,7 +320,7 @@ FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minInd 50 -snp_pval 
 # -makeMatrix 1 -doIBS 1 -doCov 1 : identity-by-state and covariance matrices based on single-read resampling (robust to variation in coverage across samples)
 TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doPost 1 -doGlf 2"
 
-# Starting angsd with -P the number fo parallel processes. Funny but in many cases angsd runs faster on -P 1
+# Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
 angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
 
 # how many SNPs?
@@ -350,7 +350,7 @@ done
 export GENOME_REF=mygenome.fasta
 FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minIndDepth 2"
 TODO="-doSaf 1 -anc $GENOME_REF"
-# In the following lines, set minInd to 80-90% of 2x pop sample size; i.e., if sample size is 20 set to 90%: 36)
+# In the following lines, set minInd to 80-90% of 2x pop sample size; i.e., if sample size is 20 set to 2*20*0.9: 36)
 angsd -b pop0.bams -GL 1 -P 1 -minInd 36 $FILTERS $TODO -out pop0
 angsd -b pop1.bams -GL 1 -P 1 -minInd 36 $FILTERS $TODO -out pop1
 
@@ -358,7 +358,7 @@ angsd -b pop1.bams -GL 1 -P 1 -minInd 36 $FILTERS $TODO -out pop1
 realSFS pop0.saf.idx >pop0.sfs
 realSFS pop1.saf.idx >pop1.sfs
 
-# generating dadi-like posterior counts
+# generating dadi-like posterior counts based on sfs priors
 realSFS dadi pop0.saf.idx pop1.saf.idx -sfs pop0.sfs -sfs pop1.sfs -ref $GENOME_REF -anc $GENOME_REF >dadiout
 
 # converting to dadi-snp format understood by dadi an Moments:
@@ -374,20 +374,21 @@ realsfs2dadi.pl dadiout 20 20 >2pops_dadi.data
 git clone https://github.com/z0on/AFS-analysis-with-moments.git
 
 # print folded 2d SFS - for denovo or when mapping to genome of the studied species
-# (change numbers to 2x 90% the number of samples for in each pop):
+# (change numbers to 2 x 0.9 x number of samples for in each pop):
 2dAFS_fold.py 2pops_dadi.data pop0 pop1 36 26
 
 # print unfolded 2d SFS - if mapping to genome of sister species
-# (change numbers to 2x number of samples for in each pop):
+# (change numbers to 2 x 0.9 x number of samples for in each pop):
 2dAFS.py 2pops_dadi.data pop0 pop1 36 36
 
-# S2M model for pop0 and pop1 
+# S2M model for pop0 and pop1: ancestral population splits into two different constant sizes, with asymmetrical migration 
 # numbers are 2x number of samples for in each pop, and then starting values of parameters: nu1, nu2, T, m12, m21, and fraction of misidentified ancestral states (for unfolded). Parameters will be perturbed each time so all runs will be different
 # run this same command 20 or more times to ensure convergence: 
 S2M.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1 0.01
 # folded (for denovo):
 S2M_fold.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1
 
+# IM2 model: ancestral population splits into two different sizes which then experience different exponential growth/decline, with asymmetrical migration 
 # Folded IM2 model for pop0 and pop1 (parameters: nu1_0,nu2_0,nu1,nu2,T,m12,m21):
 IM2_fold.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1 1 1
 
