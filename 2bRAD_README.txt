@@ -285,15 +285,40 @@ ls *bam | wc -l  # should be the same number as number of trim files
 
 # BAM files are the input into various genotype calling / popgen programs, this is the main interim result of the analysis. Archive them.
 
-#==========================
+#===================== A  N  G  S  D =====================
 
 # "FUZZY genotyping" with ANGSD - without calling actual genotypes but working with genotype likelihoods at each SNP. Optimal for low-coverage data (<10x).
 # if your coverage is >10x, go to GATK section below
 
 # install ANGSD first (see Installations section above)
 
-# listing all bam filenames
+# listing all bam filenames 
 ls *bam >bams
+
+#----------- assessing base qualities and coverage depth
+
+export GENOME_REF=mygenome.fasta
+
+# angsd settings:
+# -minMapQ 20 : only highly unique mappings (prob of erroneous mapping = 1%)
+# -baq 1 : realign around indels (not terribly relevant for 2bRAD reads mapped with --local option) 
+# -maxDepth : highest total depth (sum over all samples) to assess; set to 10x number of samples
+
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -baq 1 -ref $GENOME_REF -maxDepth 1000"
+
+# T O   D O : 
+TODO="-doQsDist 1 -doDepth 1 -doCounts 1"
+
+# in the following line, -r argument is one chromosome or contig to work with (no need to do this for whole genome as long as the chosen chromosome or contig is long enough)
+# (look up lengths of your contigs in the header of *.sam files)
+angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 1 -out dd 
+
+# summarizing results (using modified script by Matteo Fumagalli)
+Rscript ~/bin/plotQC.R dd  
+cat dd.info 
+# scp dd.pdf to laptop to look at distribution of base quality scores and fraction of sites in each sample passing coverage thresholds. Use these to guide choices of -minQ and -minIndDepth filters in subsequent ANGSD runs
+
+#--------------- population structure
 
 # Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); manually remove them from bams list. If you want to detect clones, however, do keep the replicates and analyse identity-by-state (IBS) matrix (explained below)
 
