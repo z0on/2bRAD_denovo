@@ -5,8 +5,8 @@ fin <- commandArgs(T)
 
 cat("", file=paste(fin,".info",sep="",collapse=""))
 
-pdf(paste(fin,".pdf",sep="",collapse=""))
-par(mfrow=c(2,1))
+pdf(paste(fin,".pdf",sep="",collapse=""),height=9,width=3.5)
+par(mfrow=c(3,1))
 
 ## barplot q-scores
 qs <- read.table(paste(fin,".qs",sep="",collapse=""), head=T, stringsAsFactors=F)
@@ -44,6 +44,18 @@ plot(1-cumul[,1],type="l",xlab="sample depth", ylab="fraction of sites",ylim=c(0
 abline(v=10,lty=3)
 abline(h=median(1-cumul[10,]),lty=3)
 for (i in 2:ncol(cumul)) { lines(1-cumul[,i],col=rgb(0,0,0,alpha=0.2)) }
+
+cname=paste(fin,".counts", sep="")
+system(paste("gunzip", cname))
+cts=read.table(cname,sep="\t",header=T)
+cts$X=NULL
+ctss=cts>0
+indcover=apply(ctss,1,sum)
+indcover=indcover/ncol(cts)
+indcover=sort(indcover,decreasing=T)
+sites=c(1:length(indcover))/length(indcover)
+plot(sites~indcover,type="l",ylab="fraction of sites",xlab="genotyping rate cutoff")
+
 invisible(dev.off())
 
 

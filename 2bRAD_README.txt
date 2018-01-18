@@ -327,14 +327,14 @@ cat dd.info
 # F I L T E R S :
 # (ALWAYS record your filter settings and explore different combinations to confirm that results are robust. )
 # Suggested filters :
-# -minMapQ 30 : only highly unique mappings
+# -minMapQ 20 : only highly unique mappings
 # -minQ 30 : only highly confident base calls
 # -minInd 50 : the site must be genotyped in at least 50 individuals (note: set this to at least 80% of your total number of your individuals)
 # -snp_pval 1e-5 : high confidence that the SNP is not just sequencing error 
 # -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more. Consider raising this to 0.1 for population structure analysis.
 # Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
 # also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation) and sites with really bad strand bias:
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5"
 
 # THINGS FOR ANGSD TO DO : 
 # -GL 1 : samtools likelihood model
@@ -369,11 +369,11 @@ done
 #==========================
 # ANDSD => SFS for demographic analysis
 
-# make separate files listing bams for each population (without  clones and replicates)
+# make separate files listing bams for each population (without clones and replicates)
 # assume we have two populations, pop0 and pop1, 20 individuals each, with corresponding bams listed in pop0.bams and pop1.bams
 # estimating site frequency likelihoods for each population - no filters except by genotyping rate (minInd, minIndDepth)
 export GENOME_REF=mygenome.fasta
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 30 -minQ 30 -minIndDepth 2"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minIndDepth 2"
 TODO="-doSaf 1 -anc $GENOME_REF"
 # In the following lines, set minInd to 80-90% of 2x pop sample size; i.e., if sample size is 20 set to 2*20*0.9: 36)
 angsd -b pop0.bams -GL 1 -P 1 -minInd 36 $FILTERS $TODO -out pop0
