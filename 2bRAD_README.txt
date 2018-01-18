@@ -316,7 +316,7 @@ angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 1 -out dd
 # summarizing results (using modified script by Matteo Fumagalli)
 Rscript ~/bin/plotQC.R dd  
 cat dd.info 
-# scp dd.pdf to laptop to look at distribution of base quality scores and fraction of sites in each sample passing coverage thresholds. Use these to guide choices of -minQ and -minIndDepth filters in subsequent ANGSD runs
+# scp dd.pdf to laptop to look at distribution of base quality scores, fraction of sites in each sample passing coverage thresholds, and fraction of sites passing genotyping rates cutoffs. Use these to guide choices of -minQ,  -minIndDepth and -minInd filters in subsequent ANGSD runs
 
 #--------------- population structure
 
