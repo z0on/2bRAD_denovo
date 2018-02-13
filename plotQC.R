@@ -45,6 +45,11 @@ abline(v=10,lty=3)
 abline(h=median(1-cumul[10,]),lty=3)
 for (i in 2:ncol(cumul)) { lines(1-cumul[,i],col=rgb(0,0,0,alpha=0.2)) }
 
+c5=1-cumul[5,]
+names(c5)=c(1:length(c5))
+print("proportion of sites better than coverage of 5 for each sample:")
+print(sort(c5))
+
 cname=paste(fin,".counts", sep="")
 system(paste("gunzip", cname))
 cts=read.table(cname,sep="\t",header=T)
