@@ -111,6 +111,28 @@ wget https://www.cog-genomics.org/static/bin/plink171103/plink_linux_x86_64.zip
 unzip plink_linux_x86_64.zip
 cd -
 
+-------  PopGenTools (angsd wrapper and format converter) :
+
+git clone https://github.com/CGRL-QB3-UCBerkeley/PopGenTools.git
+ll PopGenTools/
+cp PopGenTools/* ~/bin
+
+----- PGDspider :
+
+cd ~/bin
+wget http://www.cmpg.unibe.ch/software/PGDSpider/PGDSpider_2.0.7.1.zip
+unzip PGDSpider_2.0.7.1.zip
+cd -
+
+----- Bayescan :
+
+cd ~/bin
+wget http://cmpg.unibe.ch/software/BayeScan/files/BayeScan2.1.zip
+unzip BayeScan2.1.zip
+cp BayeScan2.1/binaries/BayeScan2.1_linux64bits bayescan
+chmod +x bayescan
+rm -r BayeScan*
+
 ==============================================
 
 # downloading and installing all 2bRAD scripts in $HOME/bin (or change to whatever directory you want)
@@ -220,8 +242,10 @@ ls *.trim | perl -pe 's/^(.+)$/uniquerOne.pl $1 >$1\.uni/' >unii
 ls -l *.uni | wc -l  
 
 # merging uniqued files, creating mergedUniqTags.fasta for clustering 
-# (set minDP and especially minInd higher if you want to crank up filtering against rare and possibly erroneous tag sequences)
-mergeUniq.pl uni minDP=2 minInd=2 >mydataMerged.uniq
+# set minInd to 75-80% of all your individuals (your desired genotyping rate for a locus)
+# (assuming you want to assemble fake reference genome out of these reads)
+# set minDP to even higher value (total depth), something like 2 x minInd
+mergeUniq.pl uni minDP=40 minInd=20 >mydataMerged.uniq
 
 # Done! how many reads went into analysis?
 tail mer.e*
@@ -436,7 +460,7 @@ export TACC_PICARD_DIR=/where/picard/is/installed/
 export GENOME_REF=mygenome.fasta
 ls *.bam > bams
 
-# writing command script
+# writing command script with SLURM header (some fields might be different on your cluster, contact your IT people!)
 echo '#!/bin/bash
 #SBATCH -J gt
 #SBATCH -n 40
