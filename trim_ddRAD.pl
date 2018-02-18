@@ -7,8 +7,9 @@ Trims ddRAD R1 fastq files for analysis using Agnostic Protocol
     site=[perl-style pattern] : pattern defining the site, default \'CATGC\' for SphI
  barcode=[perl-style pattern] : in-read barcode that immediately preceding the restriction site, 
                                  default \'[ATGCN]{5}\'
-     excise=[integer-integer] : bases to excise from the middle of the read (1-based). Default 0-0.
-             length=[integer] : final length of read after trimming; 
+        tagsPerRead=[integer] : number of consecutive tags to split the read into; 
+                                 default 1
+             length=[integer] : number of bases in tag; 
                                  default 100
          minBCcount=[integer] : minimum count per in-line barcode to output 
                                 a separate file. Default 100000.
@@ -17,7 +18,9 @@ Trims ddRAD R1 fastq files for analysis using Agnostic Protocol
 			            		for input file Sample_RNA_2DVH_L002_R1.cat.fastq
 			            		specifying arg2 as \'3\' would create output 
 		           		    	file with a name \'2DVH.trim'	
-		           		    	
+     excise=[integer-integer] : bases to excise from the middle of the read (1-based). Default 0-0.
+
+Mikhail Matz, matz\@utexas.edu		           		    	
 ";
 my $infile="";
 if ("@ARGV"=~/fastq=(\S+)/) { 
@@ -42,6 +45,8 @@ my $minBCcount=10000;
 if ("@ARGV"=~/minBCcount=(\d+)/){$minBCcount=$1;}
 my $len=100;
 if ("@ARGV"=~/length=(\d+)/){$len=$1;}
+my $tpr=1;
+if ("@ARGV"=~/tagsPerRead=(\d+)/){$tpr=$1;}
 
 my $trim=0;
 my $name="";
@@ -51,6 +56,7 @@ my $qua="";
 my $dummy="";
 my $ll=3;
 my %data={};
+my $totlen=$len*$tpr;
 my $counter=0;
 while (<INP>) {
 	chomp;
@@ -64,13 +70,22 @@ while (<INP>) {
 			$seq=$seq1.$seq2; 
 #print "$seq\n";
 		}
-		if ($seq=~/^($bcod)($site)(.{$len})/) {
-#print "$1:$2:$3\n";
+		if ($seq=~/^($bcod)($site)(.{$totlen})/) {
+#print "$qua\n$1:$2:\n$3\n";
 			my $rd=$3;
-			$qua=substr($qua,length("$1$2"),$len);
-			$dline="$name bcd=$1\n$rd\n+\n$qua\n";
-			push @{$data{$1}}, $dline ;
+			my $bar=$1;
+			$qua=substr($qua,length("$1$2"),$totlen);
+			my $Name=$name;
+			for (my $i=0;$i<$tpr;$i++) {
+				$name=$Name;
+				my $tag=substr $rd, $i*$len,$i*$len+$len;
+				my $tq= substr $qua, $i*$len,$i*$len+$len;
+				my $inn=$i+1;
+				$name=~s/\@/\@$inn/;
+				$dline="$name bcd=$bar\n$tag\n+\n$tq\n";
+				push @{$data{$bar}}, $dline ;
 #print "\n$dline\n";
+			}
 		}
 		else {
 #print "\t\tNOT FINDING $bcod:$site \n";
@@ -109,13 +124,22 @@ if ($ex1>0 && $seq) {
 	$seq=$seq1.$seq2; 
 #print "$seq\n";
 }
-if ($seq=~/^($bcod)($site)(.{$len})/) {
-#print "$1:$2:$3\n";
-	my $rd=$3; 
-	$qua=substr($qua,length("$1$2")-1,$len);
-	$dline="$name bcd=$1\n$rd\n+\n$qua\n";
-	push @{$data{$1}}, $dline ;
+if ($seq=~/^($bcod)($site)(.{$totlen})/) {
+#print "$qua\n$1:$2:\n$3\n";
+	my $rd=$3;
+	my $bar=$1;
+	$qua=substr($qua,length("$1$2"),$totlen);
+	my $Name=$name;
+	for (my $i=0;$i<$tpr;$i++) {
+		$name=$Name;
+		my $tag=substr $rd, $i*$len,$i*$len+$len;
+		my $tq= substr $qua, $i*$len,$i*$len+$len;
+		my $inn=$i+1;
+		$name=~s/\@/\@$inn/;
+		$dline="$name bcd=$bar\n$tag\n+\n$tq\n";
+		push @{$data{$bar}}, $dline ;
 #print "\n$dline\n";
+	}
 }
 
 my $outname;
