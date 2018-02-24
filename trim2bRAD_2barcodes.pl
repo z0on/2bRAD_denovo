@@ -56,7 +56,7 @@ while (<INP>) {
 #print "$seq:";
 		if ($seq=~/^($site)($bcod)$adap/) {
 #print "$1:$2\n";
-			my $rd=substr($1,$clip,length($1)-$clip*2);
+			my $rd=substr($1,$len,length($1)-$clip*2);
 			$qua=substr($qua,$clip,length($1)-$clip*2);
 			$dline="$name bcd=$2\n$rd\n+\n$qua\n";
 			push @{$data{$2}}, $dline ;
@@ -79,7 +79,7 @@ while (<INP>) {
 	}
 	elsif ($ll==2) { 
 		chomp;
-		$qua=$_; 
+		$qua=substr($_,length("$,length($_)); 
 		$ll=3;
 	}
 	else { $ll=2;}
