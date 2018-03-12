@@ -24,6 +24,7 @@ site=[perl-style pattern for restrictase site]
 bc2=[perls-style barcode pattern] in-line barcode that immediately follows the RAD fragment, 
 		default \'[ATGC]{4}\'
 adaptor=[far-end adaptor sequence] default AGATC
+deduplicate=1  whether to remove PCR duplicates; set to 0 to keep them.
 clip=[integer] number of bases to clip off the ends of the reads, default 0
 minBCcount=[integer] minimum count per in-line barcode to output a separate file. 
 				     Default 100000.
@@ -53,6 +54,8 @@ my $clip=0;
 if ("@ARGV"=~/clip=(\d+)/){ $clip=$1;}
 my $sampleid=100;
 if("@ARGV"=~/sampleID=(\d+)/){ $sampleid=$1;}
+my $deduplicate=1;
+if ("@ARGV"=~/deduplicate=0/){ $deduplicate=0;}
 my $trim=0;
 my $name="";
 my $name2="";
@@ -81,7 +84,7 @@ while (<INP>) {
 			my $chk1=substr($read,0,34);
 			$chk=$1.$chk1.$bcc;
 #print "$1:$2:$3|check:$chk\n";
-			if ($dups{$chk}) {
+			if ($dups{$chk} && $deduplicate) {
 				$dupnum{$bcc}++;
 #print "\t\tdup found: $chk\n";
 			}

@@ -51,7 +51,7 @@ bams=read.table(bamlist)[,1]
 c5=1-cumul[5,]
 names(c5)=bams
 print("proportion of sites better than coverage of 5 for each sample:")
-print(sort(c5))
+print(data.frame(cbind(sort(c5))))
 
 # plot number of sites left after certain genotying rate (-minInd) cutoff
 cname=paste(fin,".counts", sep="")
