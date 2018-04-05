@@ -26,7 +26,7 @@ my $site=".{12}CGA.{6}TGC.{12}|.{12}GCA.{6}TCG.{12}";
 if("@ARGV"=~/site=(\S+)/){ $site=$1;}
 my $sampleid=100;
 if("@ARGV"=~/sampleID=(\d)/){ $sampleid=$1;}
-my $adaptor="AGATCGGAA";
+my $adaptor="AGATC?";
 if("@ARGV"=~/adaptor=(\S+)/){ $adaptor=$1;}
 my $q33="-Q33";
 if("@ARGV"=~/q33=0/){ $q33="";}

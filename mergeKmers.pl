@@ -14,7 +14,7 @@ arg1: list of kmer fasta files
 minDP=[integer] minimum total sequencing depth to consider a uniqie kmer. Default 5.
 minInd=[integer] minimum number of individuals the kmer must be seen in. Default 2.
 maxInd=[integer] maximum number of individuals the kmer must be seen in. Default: 
-                 (total number of individuals - minInd). Set this to twice per-pop sample 
+                 all individuals. Set this to twice per-pop sample 
                  size for kmer sharing analysis.
 
 prints to STDOUT
@@ -48,7 +48,7 @@ while (<FL>){
 	push @ins, $_;
 }
 
-my $maxind=$#ins+1-$minind;
+my $maxind=-1;
 if ("@ARGV"=~/maxInd=(\d+)/) { $maxind=$1;}
 
 my $tag;
@@ -117,6 +117,7 @@ my @seqs=keys %dstring;
 
 
 my $globalcount=0;
+my $passedcount=0;
 my $indexx=0;
 print "id\tkmer\tcount\t",join("\t",@allins),"\n";
 foreach $seq (@seqs) {
@@ -127,7 +128,7 @@ foreach $seq (@seqs) {
 	my @cts=split(",",pop @{$dstring{$seq}});
 	my @inds=split(",", pop @{$dstring{$seq}});
 	if ($#inds+1<$minind) {	next; }
-	elsif ($#inds+1>$maxind) { next;}	
+	elsif ($#inds+1>$maxind and $maxind>0) { next;}	
 	my @ctall=();
 	my $skip=0;
 	for ($i=0;$ind=$allins[$i];$i++) {
@@ -139,10 +140,12 @@ foreach $seq (@seqs) {
 			$skip++;
 		}
 	}
+	$passedcount++;
 	push @{$dstring{$seq}}, @ctall;
 	print "k$indexx\t$seq\t",join("\t",@{$dstring{$seq}}),"\n";
 	undef $dstring{$seq};
 }
-warn "\nconsidering kmers seen at least $mincount times:\n$globalcount kmer occurences\n";
+warn "\nconsidering kmers seen at least $mincount times:$globalcount\n";
+warn "passing minDP:$mincount minInd:$minind maxInd:$maxind filters: $passedcount\n";
 $now=localtime;
 warn "done   $now\n\n";

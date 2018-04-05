@@ -2,7 +2,9 @@
 
 my $usage= "
 
-2bRAD_trim_launch_dedup.pl :
+2bRAD_trim_launch_dedup0.pl :
+
+trimmer launcher without deduplication
 
 Prints out list of calls to trim2bRAD_2barcodes_dedup.pl, one for
 each fastq file, to to trim and deduplicate raw 2bRAD reads.
@@ -17,7 +19,7 @@ site=[pattern] perl-style pattern of the restriction site to recognise, in singl
 		default is BcgI: \'.{12}CGA.{6}TGC.{12}|.{12}GCA.{6}TCG.{12}\'
 		if you need AlfI, here is how to define it: \'.{12}GCA.{6}TGC.{12}\'
 adaptor=[dna sequence] adaptor sequence to look for on the far end of the read. 
-		Default AGATC?
+		Default AGATC
 sampleID=[integer] the position of name-deriving string in the file name
 					if separated by underscores, such as: 
 					for input file Sample_RNA_2DVH_L002_R1.cat.fastq
@@ -51,5 +53,5 @@ foreach $fqf (@fqs) {
 		$outname=$parts[$sampleid-1].".tr0";
 	}
 	else { $outname=$fqf.".tr0";}
-	print "trim2bRAD_2barcodes_dedup.pl input=$fqf site=\"$site\" adaptor=\"$adaptor\" sampleID=$sampleid deduplicate=1\n";
+	print "trim2bRAD_2barcodes_dedup.pl input=$fqf site=\"$site\" adaptor=\"$adaptor\" sampleID=$sampleid deduplicate=0\n";
 }

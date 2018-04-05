@@ -60,7 +60,7 @@ cts=read.table(cname,sep="\t",header=T)
 cts$X=NULL
 ctss=cts>0
 indcover=apply(ctss,1,sum)
-indcover=indcover/ncol(cts)
+indcover=indcover/ncol(ctss)
 indcover=sort(indcover,decreasing=T)
 sites=c(1:length(indcover))/length(indcover)
 plot(sites~indcover,type="l",ylab="fraction of sites",xlab="genotyping rate cutoff")

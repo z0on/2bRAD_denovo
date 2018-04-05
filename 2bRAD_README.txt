@@ -283,7 +283,7 @@ java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  
 
 # for denovo: map with bowtie2 with end-to-end matching 
 export GENOME_FASTA=cdh_alltags_cc.fasta
-2bRAD_bowtie2_launch.pl '\.trim$' $GENOME_FASTA | perl -pe 's/--score-min L,16,1 --local -L 16 //'> bt2
+2bRAD_bowtie2_launch.pl '\.trim$' $GENOME_FASTA | perl -pe 's/--local //'> bt2
 
 # for reference-based: mapping with --local option, enables clipping of mismatching ends (guards against deletions near ends of RAD tags)
 export GENOME_FASTA=mygenome.fasta
