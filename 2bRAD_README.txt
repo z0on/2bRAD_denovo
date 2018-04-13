@@ -242,7 +242,7 @@ ls *.trim | perl -pe 's/^(.+)$/uniquerOne.pl $1 >$1\.uni/' >unii
 ls -l *.uni | wc -l  
 
 # merging uniqued files, creating mergedUniqTags.fasta for clustering 
-# set minInd to 75-80% of all your individuals (your desired genotyping rate for a locus)
+# set minInd to 40-50% of all your individuals 
 # (assuming you want to assemble fake reference genome out of these reads)
 # set minDP to even higher value (total depth), something like 2 x minInd
 mergeUniq.pl uni minDP=40 minInd=20 >mydataMerged.uniq
