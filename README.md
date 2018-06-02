@@ -12,7 +12,7 @@ Unique features of 2bRAD bioinformatics are removal of PCR duplicates based on d
 
 de novo 2bRAD pipeline is similar in ideology to STACKS, but takes advantage of the fact that 2bRAD sequences both strands. The assembled RAD loci are formatted as a fake genome, which is then used as a reference - from there on, the pipeline follows the reference-based steps. Since mid-2017 we favor ANGSD as our main data processing toolkit (http://www.popgen.dk/angsd/index.php/ANGSD). The updated 2bRAD_README.txt file suggests basic steps to analyze genotyping quality, investigate population subdivision and obtain unbiased SFS for demographic analysis (using dadi or Moments). We also keep instructions for  GATK UnifiedGenotyper and variant quality score recalibration; these would be preferred for high-coverage data (10x or better). 
 
-This repository contains the lab protocol for sample preparation, as well as scripts and walkthrough (2bRAD_denovo_README.txt) for:
+This repository contains the lab protocol for sample preparation, as well as scripts and walkthrough (2bRAD_README.txt) for:
 - read trimming, quality filtering, removal of PCR duplicates
 - assembling RAD loci
 - creating and formatting a fake genome out of RAD loci
