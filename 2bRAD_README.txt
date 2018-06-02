@@ -293,16 +293,19 @@ GENOME_FASTA=mygenome.fasta
 # execute all commands written to maps...
 
 >alignmentRates
-for F in `ls *fastq`; do 
+for F in `ls *trim`; do 
 M=`grep -E '^[ATGCN]+$' $F | wc -l | grep -f - maps.e* -A 4 | tail -1 | perl -pe 's/maps\.e\d+-|% overall alignment rate//g'` ;
-echo "$F.bt2.sam $M">>alignmentRates;
+echo "$F.sam $M">>alignmentRates;
 done
 
-ls *.bt2.sam > sams
+ls *.sam > sams
 cat sams | wc -l  # number should match number of trim files
 
 # next stage is compressing, sorting and indexing the SAM files, so they become BAM files:
-cat sams | perl -pe 's/(\S+)\.sam/samtools import \$GENOME_FASTA $1\.sam $1\.unsorted\.bam && samtools sort -o $1\.sorted\.bam $1\.unsorted\.bam && java -Xmx5g -jar \$TACC_PICARD_DIR\/picard\.jar AddOrReplaceReadGroups INPUT=$1\.sorted\.bam OUTPUT=$1\.bam RGID=group1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$1 && samtools index $1\.bam/' >s2b
+export GENOME_REF=cdh_alltags_cc.fasta
+cat sams | perl -pe 's/(\S+)\.sam/samtools import \$GENOME_REF $1\.sam $1\.unsorted\.bam && samtools sort -o $1\.sorted\.bam $1\.unsorted\.bam && java -Xmx5g -jar \$TACC_PICARD_DIR\/picard\.jar AddOrReplaceReadGroups INPUT=$1\.sorted\.bam OUTPUT=$1\.bam RGID=group1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$1 && samtools index $1\.bam/' >s2b
+
+# run all commands listed in s2b file
 
 rm *sorted*
 ls *bam | wc -l  # should be the same number as number of trim files
@@ -399,7 +402,6 @@ grep -h CV myresult_*.out
 
 # scp the *.Q and inds2pops files to laptop, plot it in R:
 # use admixturePlotting2a.R to plot (will require minor editing - population names)
-
 
 
 # scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
