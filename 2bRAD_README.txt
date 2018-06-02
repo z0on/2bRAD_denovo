@@ -242,13 +242,11 @@ ls *.trim | perl -pe 's/^(.+)$/uniquerOne.pl $1 >$1\.uni/' >unii
 ls -l *.uni | wc -l  
 
 # merging uniqued files, creating mergedUniqTags.fasta for clustering 
-# set minInd to 40-50% of all your individuals 
-# (assuming you want to assemble fake reference genome out of these reads)
+# set minInd to 25% of all your individuals 
+# (assuming we want to assemble fake reference genome out of these tags, we only
+# need to capture major alleles at each locus)
 # set minDP to even higher value (total depth), something like 2 x minInd
-mergeUniq.pl uni minDP=40 minInd=20 >mydataMerged.uniq
-
-# Done! how many reads went into analysis?
-tail mer.e*
+mergeUniq.pl uni minDP=40 minInd=20 >all.uniq
 
 # discarding tags that have more than 7 observations without reverse-complement
 head -1 all.uniq >all.tab
@@ -281,22 +279,24 @@ java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  
 #==============
 # Mapping reads to reference (reads-derived fake one, or real) and formatting bam files 
 
-# for denovo: map with bowtie2 with end-to-end matching 
-export GENOME_FASTA=cdh_alltags_cc.fasta
-2bRAD_bowtie2_launch.pl '\.trim$' $GENOME_FASTA | perl -pe 's/--local //'> bt2
+# for denovo: map reads to fake genome with bowtie2: 
+GENOME_FASTA=cdh_alltags_cc.fasta
+>maps
+for F in `ls *.trim`; do
+echo "bowtie2 --no-unal -x $GENOME_FASTA -U $F -S $F.sam">>maps
+done
 
 # for reference-based: mapping with --local option, enables clipping of mismatching ends (guards against deletions near ends of RAD tags)
-export GENOME_FASTA=mygenome.fasta
-2bRAD_bowtie2_launch.pl '\.trim$' $GENOME_FASTA > bt2
+GENOME_FASTA=mygenome.fasta
+2bRAD_bowtie2_launch.pl '\.trim$' $GENOME_FASTA > maps
 
-# execute all commands written to bt2...
+# execute all commands written to maps...
 
-# what are mapping efficiencies? 
-cat maps.e*
-
-# find out mapping efficiency for a particular input file (O9.fastq in this case)
-# (assuming all input files have different numbers of reads)
-grep -E '^[ATGCN]+$' O9.*trim | wc -l | grep -f - maps.e* -A 4 
+>alignmentRates
+for F in `ls *fastq`; do 
+M=`grep -E '^[ATGCN]+$' $F | wc -l | grep -f - maps.e* -A 4 | tail -1 | perl -pe 's/maps\.e\d+-|% overall alignment rate//g'` ;
+echo "$F.bt2.sam $M">>alignmentRates;
+done
 
 ls *.bt2.sam > sams
 cat sams | wc -l  # number should match number of trim files
@@ -367,7 +367,7 @@ FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 
 # -doGeno 32 : binary genotype likelihoods format (for ngsCovar => PCA)
 # -doMajorMinor 1 : infer major and minor alleles from data (not from reference)
 # -makeMatrix 1 -doIBS 1 -doCov 1 : identity-by-state and covariance matrices based on single-read resampling (robust to variation in coverage across samples)
-TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doPost 1 -doGlf 2"
+TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 2"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
 angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
@@ -382,11 +382,25 @@ ngsCovar -probfile myresult.geno -outfile myresult.covar -nind 61 -nsites $NSITE
 
 # if coverage is highly unequal among samples, use myresult.covMat and myresult.ibsMat from angsd run for PCoA and PCA. In fact, using these results would be conservative in any case.
 
-# ADMIXTURE for K from 2 to 5
+# NgsAdmix for K from 2 to 5
 for K in `seq 2 5` ; 
 do 
 NGSadmix -likes myresult.beagle.gz -K $K -P 10 -o mydata_k${K};
 done
+
+# alternatively, to use real ADMIXTURE on called SNPs:
+gunzip myresult.vcf.gz
+plink --vcf myresult.vcf --make-bed --out myresult
+for K in `seq 1 5`; \
+do admixture --cv myresult.bed $K | tee myresult_${K}.out; done
+
+# which K is least CV error?
+grep -h CV myresult_*.out
+
+# scp the *.Q and inds2pops files to laptop, plot it in R:
+# use admixturePlotting2a.R to plot (will require minor editing - population names)
+
+
 
 # scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
 
