@@ -8,11 +8,10 @@ cat("", file=paste(fin,".info",sep="",collapse=""))
 pdf(paste(fin,".pdf",sep="",collapse=""),height=9,width=3.5)
 par(mfrow=c(3,1))
 
-## plot q-scores
+## barplot q-scores
 qs <- read.table(paste(fin,".qs",sep="",collapse=""), head=T, stringsAsFactors=F)
-#barplot(height=qs$counts, names.arg=qs$qscore, xlab="Q-score", ylab="Counts")
+barplot(height=qs$counts, names.arg=qs$qscore, xlab="Q-score", ylab="Counts")
 qs <- cbind(qs, perc=cumsum(qs$counts/1e4)/sum(qs$counts/1e4,na.rm=T))
-plot(qscore~perc,qs,type="s")
 write.table( qs, row.names=F, col.names=T, quote=F, sep="\t", file=paste(fin,".info",sep="",collapse=""), append=T)
 
 ## global depth
