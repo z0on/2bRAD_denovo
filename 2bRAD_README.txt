@@ -1,5 +1,5 @@
 2bRAD de novo and reference-based walkthrough
-November 2, 2017
+June 2018
 Mikhail Matz (matz@utexas.edu) - ask me if anything does not work
 
 =============================================
@@ -361,7 +361,7 @@ cat dd.info
 # -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more. Consider raising this to 0.1 for population structure analysis.
 # Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
 # also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation) and sites with really bad strand bias:
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -sb_pval 1e-2 -hetbias_pval 1e-2 -skipTriallelic 1"
 
 # THINGS FOR ANGSD TO DO : 
 # -GL 1 : samtools likelihood model
@@ -379,7 +379,7 @@ angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
 NSITES=`zcat myresult.beagle.gz | wc -l`
 echo $NSITES
 
-# covariance matrix for PCA (if coverage is approximately equal across samples; set nind to your number of samples):
+# covariance matrix (I don't see a point of this, IBS matrix is the same thing but better - not sensitive to variation in coverage):
 gunzip myresult.geno.gz
 ngsCovar -probfile myresult.geno -outfile myresult.covar -nind 61 -nsites $NSITES -call 0 -norm 0 
 
@@ -403,7 +403,6 @@ grep -h CV myresult_*.out
 # scp the *.Q and inds2pops files to laptop, plot it in R:
 # use admixturePlotting2a.R to plot (will require minor editing - population names)
 
-
 # scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
 
 #==========================
@@ -411,13 +410,26 @@ grep -h CV myresult_*.out
 
 # make separate files listing bams for each population (without clones and replicates)
 # assume we have two populations, pop0 and pop1, 20 individuals each, with corresponding bams listed in pop0.bams and pop1.bams
-# estimating site frequency likelihoods for each population - no filters except by genotyping rate (minInd, minIndDepth)
+
+# filtering sites to work on - use only filters that do not distort allele frequency
+# set minInd to 75-90% of the total number fo individuals in the project
+# if you are doing any other RAD than 2bRAD or GBS, remove '-sb_pval 1e-2' from FILTERS
+cat pop0.bams pop1.bams > all.bams
+FILTERS="-minMapQ 30 -minQ 35 -minInd 36 -doHWE 1 -sb_pval 1e-2 -hetbias_pval 1e-2 -skipTriallelic 1"
+DOS="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -dogeno 3 -doPost 2"
+angsd -b all.bams -GL 1 $FILTERS $DOS -P 1 -out sfsSites
+
+# extracting and indexing list of sites to make SFS from 
+# filtering out sites where heterozygote counts comprise more than 50% of all counts (likely lumped paralogs)
+zcat sfsSites.snpStat.gz | awk '($3+$4+$5+$6)>0' | awk '($12+$13+$14+$15)/($3+$4+$5+$6)<0.5' | cut -f 1,2  >sites2do 
+angsd sites index sites2do
+
+# estimating site frequency likelihoods for each population 
 export GENOME_REF=mygenome.fasta
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minIndDepth 2"
-TODO="-doSaf 1 -anc $GENOME_REF"
-# In the following lines, set minInd to 80-90% of 2x pop sample size; i.e., if sample size is 20 set to 2*20*0.9: 36)
-angsd -b pop0.bams -GL 1 -P 1 -minInd 36 $FILTERS $TODO -out pop0
-angsd -b pop1.bams -GL 1 -P 1 -minInd 36 $FILTERS $TODO -out pop1
+TODO="-doSaf 1 -anc $GENOME_REF -ref $GENOME_REF""
+# In the following lines, set minInd to 75-90% of each pop's sample size
+angsd -sites sites2do -b pop0.bams -GL 1 -P 1 $TODO -minInd 18 -out pop0
+angsd -sites sites2do -b pop1.bams -GL 1 -P 1 $TODO -minInd 18 -out pop1
 
 # generating per-population SFS
 realSFS pop0.saf.idx >pop0.sfs
@@ -433,29 +445,47 @@ realsfs2dadi.pl dadiout 20 20 >2pops_dadi.data
 #=====================
 # 2d AFS analysis using Moments
 
-# install Moments (python package, see the beginning of this file)
-
-# get Misha's moments scripts collection
+# get Misha's Moments scripts collection
 git clone https://github.com/z0on/AFS-analysis-with-moments.git
+# set your $PATH to include the AFS-analysis-with-moments directory
 
 # print folded 2d SFS - for denovo or when mapping to genome of the studied species
 # (change numbers to 2 x 0.9 x number of samples for in each pop):
-2dAFS_fold.py 2pops_dadi.data pop0 pop1 36 26
+2dAFS_fold.py 2pops_dadi.data pop0 pop1 36 36
 
 # print unfolded 2d SFS - if mapping to genome of sister species
 # (change numbers to 2 x 0.9 x number of samples for in each pop):
 2dAFS.py 2pops_dadi.data pop0 pop1 36 36
 
-# S2M model for pop0 and pop1: ancestral population splits into two different constant sizes, with asymmetrical migration 
-# numbers are 2x number of samples for in each pop, and then starting values of parameters: nu1, nu2, T, m12, m21, and fraction of misidentified ancestral states (for unfolded). Parameters will be perturbed each time so all runs will be different
-# run this same command 20 or more times to ensure convergence: 
-S2M.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1 0.01
-# folded (for denovo):
-S2M_fold.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1
+# ------ multimodel inference: fit a diversity of 2-population models, then select the best one based on AIC.
+# there are models with a period of exponential growth ("IM" models), models with one, two or three different size and/or migration rate epochs ("SC" models, including models with no migration in some epochs), models with symmetrical migration ("sm" models, in other cases migration is asymmetrical), models with two types of genomic loci ("genomic islands") introgressing at different rates ("i" models), and some fun combinations thereof.
+# differences between models are summarized in excel table moments_multimodels.xls
 
-# IM2 model: ancestral population splits into two different sizes which then experience different exponential growth/decline, with asymmetrical migration 
-# Folded IM2 model for pop0 and pop1 (parameters: nu1_0,nu2_0,nu1,nu2,T,m12,m21):
-IM2_fold.py 2pops_dadi.data pop0 pop1 36 36 1 1 1 1 1 1 1
+# read about multimodel inference here: 
+# https://pdfs.semanticscholar.org/a696/9a3b5720162eaa75deec3a607a9746dae95e.pdf
+
+# this HAS to be parallelized - we need to fit ~100 models 10 times to make sure each model converges at its best fit at least once.
+
+# input line: the last four numbers are:
+# - projections (2 x 0.9 x number of samples) for in each pop;
+# - mutation rate per gamete per generation
+# - generation time, in thousand years
+IN="2pops_dadi.data pop0 pop1 36 36 0.02 0.005"
+
+# after setting the $IN variable, execute all commands listed in the text file "allmodels_unfolded" (if your alleles are polarized into ancestral and derived, for example by mapping to a sister species genome) or "allmodels_folded" 
+
+# collecting results while fixing broken lines
+cat *.mom | perl -pe 's/RESULT(.+)(\d)\n/RESULT$1$2/' |perl -pe 's/RESULT(.+)(\d)\n/RESULT$1$2/' |perl -pe 's/RESULT(.+)(\d)\n/RESULT$1$2/' | perl -pe 's/RESULT(.+)([\d\s])\n/RESULT$1$2/' | grep RESULT > mmods.res
+
+# extracting likelihoods and parameter numbers for AIC:
+cut -f 2,3,4,5 -d " " mmods.res >likes
+
+# use R script deltaAIC_multimodels.R to find best-fitting model.
+# using model ID number that the R script will list: 
+# - examine the model's graphic output (*.pdf of actual and modeled SFS, and *.png of the model graph)
+# - grep fitted model parameters and their SDs from *.mom files
+
+# the order of parameters are listed in files unfolded_params and folded_params. Typically pop size parameters are first, then times, then migration rates, then the fraction of genomic "islands" (in "i"  models), then percentage of misidentified ancestral states (in unfolded models).
 
 #==========================
 
