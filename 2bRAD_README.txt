@@ -442,8 +442,7 @@ realSFS dadi pop0.saf.idx pop1.saf.idx -sfs pop0.sfs -sfs pop1.sfs -ref $GENOME_
 # (numbers after the input file name are numbers of individuals sampled per population)
 realsfs2dadi.pl dadiout 20 20 >2pops_dadi.data
 
-#=====================
-# 2d AFS analysis using Moments
+#===================== 2d AFS analysis using Moments
 
 # get Misha's Moments scripts collection
 git clone https://github.com/z0on/AFS-analysis-with-moments.git
@@ -486,6 +485,78 @@ cut -f 2,3,4,5 -d " " mmods.res >likes
 # - grep fitted model parameters and their SDs from *.mom files
 
 # the order of parameters are listed in files unfolded_params and folded_params. Typically pop size parameters are first, then times, then migration rates, then the fraction of genomic "islands" (in "i"  models), then percentage of misidentified ancestral states (in unfolded models).
+
+#=========== Fst: global, per site, and per gene
+
+# writing down 2d-SFS priors
+realSFS pop0.saf.idx pop1.saf.idx -P 24 > p01.sfs ; realSFS fst index pop0.saf.idx pop1.saf.idx -sfs p01.sfs -fstout p01 
+
+# global Fst between populations
+realSFS fst stats p01.fst.idx
+
+# per-site Fst
+realSFS fst print p01.fst.idx > p01.fst
+
+# extracting gene regions out of genome annotations file (gff3)
+cat mygenome.gff3 | awk ' $3=="gene"' | cut -f 1,4,5,10 >gene_regions.tab
+
+# extending to plus-minus 2 kb around the gene
+awk '{print $1"\t"$2-2000"\t"$3+2000"\t"$4}' gene_regions.tab '> genes.txt
+
+# use fstPerGene.R to compute per-gene Fst
+
+#============= Bayescan: looking for Fst outliers
+
+# Converting vcf (using PGDspider) to Bayescan format: 
+
+# make tab-delimited file called bspops LISTING assignments of individuals (as they are named in the vcf file) to populations, for example:
+ind1	pop0
+ind2	pop0
+ind3	pop1
+ind4	pop1
+
+# create a file called vcf2bayescan.spid containing this text:
+echo "############
+# VCF Parser questions
+PARSER_FORMAT=VCF
+# Do you want to include a file with population definitions?
+VCF_PARSER_POP_QUESTION=true
+# Only input following regions (refSeqName:start:end, multiple regions: whitespace separated):
+VCF_PARSER_REGION_QUESTION=
+# What is the ploidy of the data?
+VCF_PARSER_PLOIDY_QUESTION=DIPLOID
+# Only output following individuals (ind1, ind2, ind4, ...):
+VCF_PARSER_IND_QUESTION=
+# Output genotypes as missing if the read depth of a position for the sample is below:
+VCF_PARSER_READ_QUESTION=
+# Take most likely genotype if "PL" or "GL" is given in the genotype field?
+VCF_PARSER_PL_QUESTION=true
+# Do you want to exclude loci with only missing data?
+VCF_PARSER_EXC_MISSING_LOCI_QUESTION=false
+# Select population definition file:
+VCF_PARSER_POP_FILE_QUESTION=./bspops
+# Only output SNPs with a phred-scaled quality of at least:
+VCF_PARSER_QUAL_QUESTION=
+# Do you want to include non-polymorphic SNPs?
+VCF_PARSER_MONOMORPHIC_QUESTION=false
+# Output genotypes as missing if the phred-scale genotype quality is below:
+VCF_PARSER_GTQUAL_QUESTION=
+# GESTE / BayeScan Writer questions
+WRITER_FORMAT=GESTE_BAYE_SCAN
+# Specify which data type should be included in the GESTE / BayeScan file  (GESTE / BayeScan can only analyze one data type per file):
+GESTE_BAYE_SCAN_WRITER_DATA_TYPE_QUESTION=SNP
+############" >vcf2bayescan.spid
+
+# converting vcf (either myresult.vcf from ANGSD or the one from GATK) to bayescan format
+java -Xmx1024m -Xms512m -jar ~/bin/PGDSpider_2.0.7.1/PGDSpider2-cli.jar -inputfile myresult.vcf -outputfile Best.bayescan -spid vcf2bayescan.spid 
+
+# launching bayescan (this might take 12-24 hours)
+bayescan Best.bayescan -threads=20
+
+# use bayescan_plots.R to examine results
+
+# removing outliers from VCF file
+removeBayescanOutliers.pl bayescan=snp.baye_fst.txt vcf=myresult.vcf FDR=0.5 >myresult_nobs.vcf
 
 #==========================
 
