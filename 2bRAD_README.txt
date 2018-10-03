@@ -189,7 +189,7 @@ bowtie2-build $GENOME_FASTA $GENOME_FASTA
 samtools faidx $GENOME_FASTA
 
 export GENOME_DICT=$WORK/db/mygenome.dict 
-java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
+java -jar $TACC_PICARD_T_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
 
 #==================
 # Step 1: Splitting by in-read barcode, deduplicating and quality-filtering the reads
