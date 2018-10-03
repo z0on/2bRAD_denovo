@@ -55,7 +55,7 @@ print("proportion of sites better than coverage of 5 for each sample:")
 print(data.frame(cbind(sort(c5))))
 
 # plot number of sites left after certain genotying rate (-minInd) cutoff
-cname=paste(fin,".counts", sep="")
+cname=paste(fin,".counts.gz", sep="")
 system(paste("gunzip", cname))
 cts=read.table(cname,sep="\t",header=T)
 cts$X=NULL

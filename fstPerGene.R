@@ -55,10 +55,6 @@ genes$fst01=gfst01
 head(genes[genes$protein!="unknown",])
 save(genes,file="PerGeneFst.RData")
 
-# plotting scatters of Fst by gene to compare Fst in two comparisons (clusters 1vs2 and 3vs4)
-# only for genes with names 
-genes.id=genes[genes$protein!="unknown",]
-
 # saving table of per-gene Fst for GO_MWU analysis
 f01=genes[,c("gene","fst01")]
 f01=na.omit(f01)

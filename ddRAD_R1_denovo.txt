@@ -1,0 +1,265 @@
+# search-replace here:
+#    matz@utexas.edu  --> your email
+#    tagmap --> your allocation project name
+
+---- INSTALLATIONS -----
+
+------- ANGSD (good luck with this one): 
+
+# install xz first from https://tukaani.org/xz/
+cd
+wget https://tukaani.org/xz/xz-5.2.3.tar.gz --no-check-certificate
+tar vxf xz-5.2.3.tar.gz 
+cd xz-5.2.3/
+./configure --prefix=$HOME/xz-5.2.3/
+make
+make install
+
+# edit .bashrc:
+nano .bashrc
+   export LD_LIBRARY_PATH=$HOME/xz-5.2.3/lib:$LD_LIBRARY_PATH
+   export LIBRARY_PATH=$HOME/xz-5.2.3/lib:$LIBRARY_PATH
+   export C_INCLUDE_PATH=$HOME/xz-5.2.3/include:$C_INCLUDE_PATH
+logout
+# re-login
+
+# now, install htslib:
+cd
+git clone https://github.com/samtools/htslib.git
+cd htslib
+make CFLAGS=" -g -Wall -O2 -D_GNU_SOURCE -I$HOME/xz-5.2.3/include"
+
+cd
+git clone https://github.com/ANGSD/angsd.git 
+cd angsd
+make HTSSRC=../htslib
+
+# now adding ANGSD to $PATH
+cd
+nano .bashrc
+# section 2:
+   export PATH=$HOME/angsd:$PATH
+   export PATH=$HOME/angsd/misc:$PATH
+# save (Ctl-O, Ctl-X)
+
+-------  ngsTools :
+
+cd ~/bin
+git clone https://github.com/mfumagalli/ngsPopGen.git
+cd ngsPopGen
+make
+mv ngs* ..
+cd -
+
+-------  NGSadmix :
+cd ~/bin/
+wget popgen.dk/software/download/NGSadmix/ngsadmix32.cpp 
+g++ ngsadmix32.cpp -O3 -lpthread -lz -o NGSadmix
+cd -
+
+-------- Misha's 2bRAD scripts
+
+cd ~/bin
+git clone https://github.com/z0on/2bRAD_denovo.git
+chmod +x 2bRAD_denovo/*.pl
+mv 2bRAD_denovo/* .
+rm -rf 2bRAD_denovo
+
+
+
+# assuming $HOME/bin is in your $PATH already; if not, add it (edit .bashrc and re-login)
+
+#----------------------  ddRAD R1 read processing
+
+# moving R2 reads away
+mkdir R2
+mv *_R2* R2
+
+# look at reads
+head -50 myfile.fastq | grep -E "^[ATGCN]+$"
+
+ANCCACATGCCACAAACAGAGTCGACTGAGGTATGCAAAACCACATTTGGCCAAGCCAGTTTCATNTTGGAAGAAGGTCCTGTGGACTGATGAAACCAAGATTGAGTTGTTTGGTCACACAAAAAGGCGTTATGCATGGCGCCACAAAGA
+CNATCCATGCATTAGCGCTGCCTTTTCCACGCCCGAGGTCTGAATCGTCAGAGCAGCTGCTATGTNACAGGGTCCCAAAGACCACTGAGATCGTTATACAGATCGCTACGGGTTGCCGTATCGTTGCTGCATTATTGGGAAGATCTGACT
+TNGATCATGCCTAGGAGTTGTAGGGAGGTCATACAGGCACGTGGAGGCCACACACAATACTGAGCNTCATTTTGACTTGTTTTAAGGACATTCCATCCCACTTTAATTCCAATCCATATGTGAAGGGATGGGTGAGCTTTTATTTTAATG
+TNCATCATGCAGGTAGCTATTTACTGCCGTCCCTTTACGATGGACTGTTGTTTGTAACATGTTAGNTGTGTCCCTACTCACCATCACATCCAGGAACTCAATACTCTCATGGCTATATTTATACGTGAGCTTAATATTGACCATATTCTA
+ANTTACATGCCTGCTGAGAGCAGCAGCTCATGCATGTGGCTGACCGAAAAGATTATGATGAAGGCNATCTGGTCATGGGCCCCCCCAGAGCCCGGGCCCCCGGGCACTAGCCCAGATTGCCCTCATTATAATCCGCCTATGCCCCCAGGG
+ANGGTCATGCCAAAGCGCTGACACGTCCCCGTCCCGGCGCCATTTTGCCAGCGTCTCCTCTTCTANCAAGTCCTGTCTCCCGGAGCCTGTGAGTCTGACTGCGCCTGCGCAACTCCTGTGTTTCACACGGGAGCGCGCAGGAGCCGGCAG
+ANGGTCATGCAGGAATACAGGAAAATGCTGAATCATATGCTCTTCGATAGCATATTAATAATTAANATTCCAGGCCCACACGCAAAGTCGCTCTTAAAGGGCCAGGCATTTTTTAAAAATTAGGGCGGCACCAATAACACATGAAGACAA
+GNATGCATGCCAGATGTTGCAAACGGCCTTTTTGGGGTTGTCGGAACATTCCTTAAAAAACAACCNGACTCGGGAAGACCTCACAGATGTAGTGGCAACGTCCGTCGTGTTGGTGGTCCGGGTAACGGTTGCCTGCCTTGTGTGTGCGGT
+TNGATCATGCTGAAGTCAGTTACCGGCTACAGAAGAGCACGCTGCATGGTGTGGGAGTGGGACAGNTGAGTAAAATAGTTTTGTTTTGTTTTTTAAATTCCAAGGTCAGGTTGCTTAAGGTAAAATGAGTTATACAGCGAATGGTCAAGA
+CNACCCATGCCCCTGTTCGGCAGCATCATGCGTCCCCTGTGAATGTGCTATTGAGATTGTAATAGNGTGCATACAATGTTTACTGCTGCCATCTTTGGACCGTTGGTGCTCCAAAGATGGTAGCGGAATAAAACCCTGTGAACGCGCTAT
+ANCTACATGCGGAGGCACATGCAATACAAGCACCCGACTAGATGGCGGGTAGACCAAGTTGTAACNCCTGTGTCTGAGGGTCAAACCACTGCCCCTCCACCCATACTACGTTATTCCCAGTCTGCTGTACAGGAAGCAGGCGCTGTTGCC
+CNACCCATGCACCTTATCACATCTTGCAGTACCTGATCTTTCCGCAGACTGTTGGAGCTGAGTGCNACAGCCTTTCATCAAGATTTATTAAGCAGCCAAACCCGAACACTAAAAAGGACTTTCTTTTTGAAGTCCATGTTCGGGGCTCCT
+GNATGCATGCTTTACTTCACTTCATCTGACGGTTGGCAACATGCTTGGAAGTGTGAGGCTTGCACNACTGCTGCTATGCAATGGAAACACATCACACGGTTTGTGGGCTAATGTTCATTCCAGAGGAGGTGTGAAACTCAAACGGTATTT
+
+# de-multiplexing, leaving tag 120b in length, excising the 66th base (N in many reads in this case):
+>tdd
+for D in `ls *.fastq`;do echo "trim_ddRAD.pl fastq=$D excise=66-66 minBCcount=80000 length=120 tagsPerRead=1 sampleID=2">>tdd;done
+launcher_creator.py -j tdd -n tdd -a tagmap -t 1:00:00 -e matz@utexas.edu -q normal
+sbatch tdd.slurm
+
+# quality filtering using fastx_toolkit
+module load fastx_toolkit
+ls *.tr0 | perl -pe 's/^(\S+)\.tr0$/cat $1\.tr0 \| fastq_quality_filter -q 20 -p 90 >$1\.trim/' >filt0
+launcher_creator.py -j filt0 -n filt0 -t 0:15:00 -a mega2014 -e matz@utexas.edu -q normal
+sbatch filt0.slurm
+
+#------------------ "STACKING"
+
+# converting fastq to fasta (for kmer analysis)
+for F in `ls *trim`; do echo "fastq_to_fasta -i $F -o $F.fasta" >>f2f ;done
+launcher_creator.py -j f2f -n f2f -t 0:30:00 -a tagmap -e matz@utexas.edu 
+sbatch f2f.slurm
+
+# analyzing kmers (120-mers) 
+module load jellyfish
+rm jelly
+for F in `ls *fasta`; do echo "jellyfish count -m 120 -s 100M -t 1 -C $F -o $F.jf; jellyfish dump $F.jf > $F.kmers.fa">>jelly;done
+launcher_creator.py -j jelly -n jelly -t 0:30:00 -a tagmap -e matz@utexas.edu -w 12 -q normal
+sbatch jelly.slurm
+
+# merging kmers, minDP=6 , minInd=3, maxInd=[all individuals]
+ls *kmers.fa > all.kf
+echo "mergeKmers.pl all.kf minDP=6 minInd=3 > all.ktab"> mk
+launcher_creator.py -j mk -n mk -t 0:30:00 -a tagmap -e matz@utexas.edu 
+sbatch mk.slurm
+
+# in the mk.o* file, should see report something like this:
+# considering kmers seen at least 6 times:8663509 kmers
+# passing minDP:6 minInd:3 maxInd:-1 filters: 562020
+
+#------------------ clustering kmers into "loci"
+
+# converting kmers to fasta
+awk '{print ">"$1"\n"$2}' all.ktab | tail -n +3 > all.fasta
+
+# clustering kmers into loci using cd-hit
+# clustering allowing for up to 3% mismatch (-c 0.97); the most abundant sequence becomes reference
+echo "cd-hit-est -i all.ktab.fasta -o all.clust -aL 1 -aS 1 -g 1 -c 0.97 -M 0 -T 0" >>cdhi;done 
+launcher_creator.py -j cdhi -n cdhi -t 0:30:00 -a tagmap -e matz@utexas.edu
+sbatch cdhi.slurm
+
+# number of clusters:
+grep ">"  all.ktab.fasta.clust | wc -l
+
+# adding loci designations to kmer table:
+>k2l
+echo "ktable2loci.pl all.ktab all.ktab.fasta.clust.clstr all.ktab.fasta.clust > all.ltab">>k2l
+launcher_creator.py -j k2l -n k2l -t 0:30:00 -a tagmap -e matz@utexas.edu
+sbatch k2l.slurm
+
+#------------------------- making "genome" (30 fake chromosomes made of concatenated "loci")
+
+module load perl
+module load bowtie
+module load samtools
+module load picard-tools
+
+idev
+
+F='all.ktab.fasta.clust'
+concatFasta.pl fasta=$F num=30 && GENOME_FASTA=`ls $F | perl -pe 's/(\S)\.ktab.+/$1_cc.fasta/'` && GENOME_DICT=`ls $F | perl -pe 's/(\S)\.ktab.+/$1_cc.dict/'` && samtools faidx $GENOME_FASTA && java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT && bowtie2-build $GENOME_FASTA $GENOME_FASTA
+
+exit
+
+#------------------------- mapping trimmed-filtered reads to "genome"
+
+rm maps
+for F in `ls *.trim`; do
+REF=all_cc.fasta
+echo "bowtie2 --no-unal -x $REF -U $F -S $F.sam">>maps
+done
+launcher_creator.py -j maps -n maps -t 2:00:00 -a tagmap -e matz@utexas.edu
+sbatch maps.slurm
+
+#------------------------- converting sams to bams, indexing
+
+>s2b
+
+ls *.sam | perl -pe 's/(\S+)\.sam/samtools import all_cc\.fasta $1\.sam $1\.unsorted\.bam && samtools sort -o $1\.sorted\.bam $1\.unsorted\.bam && java -Xmx5g -jar \$TACC_PICARD_DIR\/picard\.jar AddOrReplaceReadGroups INPUT=$1\.sorted\.bam OUTPUT=$1\.bam RGID=group1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$1 && samtools index $1\.bam/' >>s2b
+launcher_creator.py -j s2b -n s2b -t 1:00:00 -q normal -w 12 -a mega2014 -e matz@utexas.edu
+sbatch s2b.slurm
+
+rm *sorted*
+
+#------------------------- quality assessment, ANGSD (using only chr1 = 1/10th of total)
+
+ls *bam > bams
+
+export GENOME_REF=all_cc.fasta
+
+# angsd settings:
+# -minMapQ 20 : only highly unique mappings (prob of erroneous mapping = 1%)
+# -baq 1 : realign around indels (not terribly relevant for 2bRAD reads mapped with --local option) 
+# -maxDepth : highest total depth (sum over all samples) to assess; set to 10x number of samples
+
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -baq 1 -ref $GENOME_REF -maxDepth 1000"
+
+# T O   D O : 
+TODO="-doQsDist 1 -doDepth 1 -doCounts 1"
+
+# in the following line, -r argument is one chromosome or contig to work with (no need to do this for whole genome as long as the chosen chromosome or contig is long enough)
+# (look up lengths of your contigs in the header of *.sam files)
+angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 1 -out dd 
+
+# summarizing results (using modified script by Matteo Fumagalli)
+Rscript ~/bin/plotQC.R dd  
+cat dd.info 
+# scp dd.pdf to laptop to look at distribution of base quality scores, fraction of sites in each sample passing coverage thresholds, and fraction of sites passing genotyping rates cutoffs. Use these to guide choices of -minQ,  -minIndDepth and -minInd filters in subsequent ANGSD runs
+
+#--------------- population structure
+
+# Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); manually remove them from bams list. If you want to detect clones, however, do keep the replicates and analyse identity-by-state (IBS) matrix (explained below)
+
+# Generating genotype likelihoods from highly confident (non-sequencing-error) SNPs
+
+# F I L T E R S :
+# (ALWAYS record your filter settings and explore different combinations to confirm that results are robust. )
+# Suggested filters :
+# -minMapQ 20 : only highly unique mappings
+# -minQ 30 : only highly confident base calls
+# -minInd 50 : the site must be genotyped in at least 50 individuals (note: set this to at least 80% of your total number of your individuals if you can, he third quality assessment graph is your guide)
+# -snp_pval 1e-5 : high confidence that the SNP is not just sequencing error 
+# -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more. Consider raising this to 0.1 for population structure analysis.
+# Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
+# also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation):
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hetbias_pval 1e-2 -skipTriallelic 1"
+
+# THINGS FOR ANGSD TO DO : 
+# -GL 1 : samtools likelihood model
+# -doGlf 2 : output beagle format (for admixture)
+# -doPost 1 : output posterior allele frequencies based on HWE prior
+# -doMajorMinor 1 : infer major and minor alleles from data (not from reference)
+# -makeMatrix 1 -doIBS 1 -doCov 1 : identity-by-state and covariance matrices based on single-read resampling (robust to variation in coverage across samples)
+TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 2"
+
+# Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
+angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
+
+# how many SNPs?
+NSITES=`zcat myresult.beagle.gz | wc -l`
+echo $NSITES
+
+# use myresult.covMat and myresult.ibsMat from angsd run for PCoA and PCA (see last line of this section).
+
+# NgsAdmix for K from 2 to 5
+for K in `seq 2 5` ; 
+do 
+NGSadmix -likes myresult.beagle.gz -K $K -P 10 -o mydata_k${K};
+done
+
+# alternatively, to use real ADMIXTURE on called SNPs:
+gunzip myresult.vcf.gz
+plink --vcf myresult.vcf --make-bed --out myresult
+for K in `seq 1 5`; \
+do admixture --cv myresult.bed $K | tee myresult_${K}.out; done
+
+# which K is least CV error?
+grep -h CV myresult_*.out
+
+# scp the *.Q and inds2pops files to laptop, plot it in R:
+# use admixturePlotting2a.R to plot (will require minor editing - population names)
+
+# scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
+
+#-------------
