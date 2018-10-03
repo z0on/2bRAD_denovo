@@ -357,7 +357,7 @@ cat dd.info
 # -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more. Consider raising this to 0.1 for population structure analysis.
 # Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
 # also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation) and sites with really bad strand bias:
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -sb_pval 1e-2 -hetbias_pval 1e-2 -skipTriallelic 1"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3 -skipTriallelic 1"
 
 # THINGS FOR ANGSD TO DO : 
 # -GL 1 : samtools likelihood model
@@ -389,7 +389,7 @@ done
 
 # alternatively, to use real ADMIXTURE on called SNPs:
 gunzip myresult.vcf.gz
-plink --vcf myresult.vcf --make-bed --out myresult
+plink --vcf myresult.vcf --make-bed --allow-extra-chr --out myresult
 for K in `seq 1 5`; \
 do admixture --cv myresult.bed $K | tee myresult_${K}.out; done
 
@@ -411,7 +411,7 @@ grep -h CV myresult_*.out
 # set minInd to 75-90% of the total number fo individuals in the project
 # if you are doing any other RAD than 2bRAD or GBS, remove '-sb_pval 1e-2' from FILTERS
 cat pop0.bams pop1.bams > all.bams
-FILTERS="-minMapQ 30 -minQ 35 -minInd 36 -doHWE 1 -sb_pval 1e-2 -hetbias_pval 1e-2 -skipTriallelic 1"
+FILTERS="-minMapQ 30 -minQ 35 -minInd 36 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3 -skipTriallelic 1"
 DOS="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -dogeno 3 -doPost 2"
 angsd -b all.bams -GL 1 $FILTERS $DOS -P 1 -out sfsSites
 
