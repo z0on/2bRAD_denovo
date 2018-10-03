@@ -412,7 +412,7 @@ grep -h CV myresult_*.out
 
 # filtering sites to work on - use only filters that do not distort allele frequency
 # set minInd to 75-90% of the total number fo individuals in the project
-# if you are doing any other RAD than 2bRAD or GBS, remove '-sb_pval 1e-2' from FILTERS
+# if you are doing any other RAD than 2bRAD or GBS, remove '-sb_pval 1e-3' from FILTERS
 cat pop0.bams pop1.bams > all.bams
 FILTERS="-minMapQ 30 -minQ 35 -minInd 36 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3 -skipTriallelic 1"
 DOS="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -dogeno 3 -doPost 2"
@@ -426,9 +426,8 @@ angsd sites index sites2do
 # estimating site frequency likelihoods for each population 
 export GENOME_REF=mygenome.fasta
 TODO="-doSaf 1 -anc $GENOME_REF -ref $GENOME_REF""
-# In the following lines, set minInd to 75-90% of each pop's sample size
-angsd -sites sites2do -b pop0.bams -GL 1 -P 1 $TODO -minInd 18 -out pop0
-angsd -sites sites2do -b pop1.bams -GL 1 -P 1 $TODO -minInd 18 -out pop1
+angsd -sites sites2do -b pop0.bams -GL 1 -P 1 $TODO -out pop0
+angsd -sites sites2do -b pop1.bams -GL 1 -P 1 $TODO -out pop1
 
 # generating per-population SFS
 realSFS pop0.saf.idx >pop0.sfs
