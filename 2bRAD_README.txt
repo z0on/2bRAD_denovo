@@ -141,10 +141,13 @@ mkdir bin
 cd ~/bin 
 # cloning github repositories
 git clone https://github.com/z0on/2bRAD_denovo.git
+git clone https://github.com/z0on/2bRAD_GATK.git
 # move scripts to ~/bin from sub-directories
+mv 2bRAD_GATK/* . 
 mv 2bRAD_denovo/* . 
 # remove now-empty directory
 rm -rf 2bRAD_denovo 
+rm -rf 2bRAD_GATK 
 
 # designating all .pl and .py files (perl and python scripts) as executable
 chmod +x *.pl 
