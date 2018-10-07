@@ -89,6 +89,12 @@ wget popgen.dk/software/download/NGSadmix/ngsadmix32.cpp
 g++ ngsadmix32.cpp -O3 -lpthread -lz -o NGSadmix
 cd -
 
+-------  ngsRelate :
+cd 
+git clone https://github.com/ANGSD/NgsRelate.git
+cd NgsRelate
+make HTSSRC=../htslib
+
 -------  stairwayPlot :
 
 # project page: https://sites.google.com/site/jpopgen/stairway-plot
@@ -350,37 +356,19 @@ cat dd.info
 
 # Generating genotype likelihoods from highly confident (non-sequencing-error) SNPs
 
-# F I L T E R S :
-# (ALWAYS record your filter settings and explore different combinations to confirm that results are robust. )
-# Suggested filters :
-# -minMapQ 20 : only highly unique mappings
-# -minQ 30 : only highly confident base calls
-# -minInd 50 : the site must be genotyped in at least 50 individuals (note: set this to at least 80% of your total number of your individuals)
-# -snp_pval 1e-5 : high confidence that the SNP is not just sequencing error 
-# -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more. Consider raising this to 0.1 for population structure analysis.
-# Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
-# also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation) and sites with really bad strand bias:
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3 -skipTriallelic 1"
-
-# THINGS FOR ANGSD TO DO : 
-# -GL 1 : samtools likelihood model
-# -doGlf 2 : output beagle format (for admixture)
-# -doPost 1 : output posterior allele frequencies based on HWE prior
-# -doGeno 32 : binary genotype likelihoods format (for ngsCovar => PCA)
-# -doMajorMinor 1 : infer major and minor alleles from data (not from reference)
-# -makeMatrix 1 -doIBS 1 -doCov 1 : identity-by-state and covariance matrices based on single-read resampling (robust to variation in coverage across samples)
-TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 2"
+TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 3"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
 angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
 
 # how many SNPs?
-NSITES=`zcat myresult.beagle.gz | wc -l`
+NSITES=`zcat myresult.mafs.gz | wc -l`
 echo $NSITES
 
-# covariance matrix (I don't see a point of this, IBS matrix is the same thing but better - not sensitive to variation in coverage):
-gunzip myresult.geno.gz
-ngsCovar -probfile myresult.geno -outfile myresult.covar -nind 61 -nsites $NSITES -call 0 -norm 0 
+#relatedness (column "rab" in the result is relatedness coefficient, Fa and Fb are individual inbreeding coefficients):
+zcat myresult.mafs.gz | cut -f5 |sed 1d >freq
+NIND=`cat bams | wc -l`
+ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 
 # if coverage is highly unequal among samples, use myresult.covMat and myresult.ibsMat from angsd run for PCoA and PCA. In fact, using these results would be conservative in any case.
 
