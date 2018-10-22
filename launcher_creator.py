@@ -64,62 +64,8 @@ module load launcher
 parametric_job_submission='''
 export EXECUTABLE=$TACC_LAUNCHER_DIR/init_launcher 
 export CONTROL_FILE={control_file}
-export WORKDIR=.
-# 
-# Variable description:
-#
-#  EXECUTABLE     = full path to the job launcher executable
-#  CONTROL_FILE   = text input file which specifies
-#                   executable for each process
-#                   (should be located in WORKDIR)
-#  WORKDIR        = location of working directory
-#
-#      <------ End Setup Parameters ------>
-#--------------------------------------------------------
-#--------------------------------------------------------
-
-#----------------
-# Error Checking
-#----------------
-
-if [ ! -e $WORKDIR ]; then
-    echo " "
-    echo "Error: unable to change to working directory."
-	echo "       $WORKDIR"
-	echo " "
-	echo "Job not submitted."
-	exit
-fi
-
-if [ ! -f $EXECUTABLE ]; then
-	echo " "
-	echo "Error: unable to find launcher executable $EXECUTABLE."
-	echo " "
-	echo "Job not submitted."
-	exit
-fi
-
-if [ ! -f $WORKDIR/$CONTROL_FILE ]; then
-	echo " "
-	echo "Error: unable to find input control file $CONTROL_FILE."
-	echo " "
-	echo "Job not submitted."
-	exit
-fi
-
-
-#----------------
-# Job Submission
-#----------------
-
-cd $WORKDIR/
-echo " WORKING DIR:   $WORKDIR/"
-
 $TACC_LAUNCHER_DIR/paramrun $EXECUTABLE $CONTROL_FILE
 
-echo " "
-echo " Parameteric Job Complete"
-echo " "
 '''
 
 parametric_job_submission_ls5='''
@@ -503,34 +449,12 @@ Report problems to rt-other@ccbb.utexas.edu''')
     host = subprocess.check_output(["hostname", "-f"]).split('.')[1]
 
     if not results.launcher:
-        if host == "ls4":
-            results.launcher = '{}.sge'.format(results.name)
-        elif host in ["stampede", "ls5"]:
-            results.launcher = '{}.slurm'.format(results.name)
-        else:
-            results.launcher
+        results.launcher = '{}.slurm'.format(results.name)
 
     
     launcher_file = open(results.launcher, 'w')
-    
-    if host == "ls4":
-        generate_lonestar_launcher(results, launcher_file)
-    elif host == "stampede":
-        generate_stampede_launcher(results, launcher_file)
-    elif host == "ls5":
-        generate_ls5_launcher(results, launcher_file)
-    else:
-        generate_generic_launcher(results, launcher_file)
-
+    generate_stampede_launcher(results, launcher_file)
     launcher_file.close()
-
-    if results.submit_cmd:
-        print results.launcher
-    else:
-        if host in ["stampede", "ls5"]:
-            print 'Launcher successfully created. Type "sbatch {}" to queue your job.'.format(results.launcher)
-        else:
-            print 'Launcher successfully created. Type "qsub {}" to queue your job.'.format(results.launcher)
 
 if __name__ == '__main__':
     main()
