@@ -94,6 +94,22 @@ cd
 git clone https://github.com/ANGSD/NgsRelate.git
 cd NgsRelate
 make HTSSRC=../htslib
+cp ngs* ~/bin/
+cd
+
+------ ngsLD :
+
+cd 
+git clone https://github.com/fgvieira/ngsLD.git
+cd ngsLD
+
+nano Makefile
+add -I${TACC_GSL_INC}  to CC and CXX macros;
+and -L${TACC_GSL_LIB} to the 'LIB = ...' line.
+
+module load gsl
+make
+cp ngsLD ~/bin
 
 -------  stairwayPlot :
 
@@ -248,11 +264,11 @@ ls *.trim | perl -pe 's/^(.+)$/uniquerOne.pl $1 >$1\.uni/' >unii
 ls -l *.uni | wc -l  
 
 # merging uniqued files, creating mergedUniqTags.fasta for clustering 
-# set minInd to 25% of all your individuals 
+# set minInd to 1/3rd of all your individuals 
 # (assuming we want to assemble fake reference genome out of these tags, we only
 # need to capture major alleles at each locus)
 # set minDP to even higher value (total depth), something like 2 x minInd
-mergeUniq.pl uni minDP=40 minInd=20 >all.uniq
+mergeUniq.pl uni minDP=50 minInd=25 >all.uniq
 
 # discarding tags that have more than 7 observations without reverse-complement
 head -1 all.uniq >all.tab
@@ -262,12 +278,12 @@ awk '!($3>7 && $4==0)' all.uniq >>all.tab
 awk '{print ">"$1"\n"$2}' all.tab | tail -n +3 > all.fasta
 
 # clustering reads into loci using cd-hit
-# clustering allowing for up to 3 mismatches (-c 0.91); the most abundant sequence becomes reference
-cd-hit-est -i all.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.91 -M 0 -T 0  
+# clustering allowing for not more than 2e mismatcsh (-c 0.94); the most abundant sequence becomes reference
+cd-hit-est -i all.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.94 -M 0 -T 0  
 
 #------------
 # making fake reference genome (of 30 chromosomes) out ot cd-hit cluster representatives
-# need bowtie2, samtools and picard_tools for indexing
+# need bowtie2, samtools and picard for indexing
 
 concatFasta.pl fasta=cdh_alltags.fas num=30
 
@@ -346,8 +362,10 @@ TODO="-doQsDist 1 -doDepth 1 -doCounts 1 -dumpCounts 2"
 angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 1 -out dd 
 
 # summarizing results (using modified script by Matteo Fumagalli)
-Rscript ~/bin/plotQC.R dd  
-cat dd.info 
+Rscript ~/bin/plotQC.R dd >qranks
+# proportion of sites covered at >5x:
+cat qranks
+
 # scp dd.pdf to laptop to look at distribution of base quality scores, fraction of sites in each sample passing coverage thresholds, and fraction of sites passing genotyping rates cutoffs. Use these to guide choices of -minQ,  -minIndDepth and -minInd filters in subsequent ANGSD runs
 
 #--------------- population structure
@@ -355,7 +373,9 @@ cat dd.info
 # Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); manually remove them from bams list. If you want to detect clones, however, do keep the replicates and analyse identity-by-state (IBS) matrix (explained below)
 
 # Generating genotype likelihoods from highly confident (non-sequencing-error) SNPs
+# set minInd to 75-80% of your total number of bams
 
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 25 -baq 1 -dosnpstat 1 -doHWE 1 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
 TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 3"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
