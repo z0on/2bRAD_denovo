@@ -376,7 +376,7 @@ cat qranks
 # set minInd to 75-80% of your total number of bams
 # if you expect very highly differentiated populations with nearly fixed alternative alleles, remove '-hwe_pval 1e-5' form FILTERS
 FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 25 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
-TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 23"
+TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 2"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
 angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
@@ -384,12 +384,6 @@ angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
 # how many SNPs?
 NSITES=`zcat myresult.mafs.gz | wc -l`
 echo $NSITES
-
-#relatedness (column "rab" in the result is relatedness coefficient, Fa and Fb are individual inbreeding coefficients):
-zcat myresult.mafs.gz | cut -f5 |sed 1d >freq
-NIND=`cat bams | wc -l`
-ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
-
 
 # NgsAdmix for K from 2 to 5 : do not run if the dataset contains clones or genotyping replicates!
 for K in `seq 2 5` ; 
@@ -410,6 +404,13 @@ grep -h CV myresult_*.out
 # use admixturePlotting2a.R to plot (will require minor editing - population names)
 
 # scp *Mat, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
+
+# relatedness (must run ANGSD with option '-doGlf 3' to make this work)
+# (column "rab" in the result is relatedness coefficient, Fa and Fb are individual inbreeding coefficients):
+zcat myresult.mafs.gz | cut -f5 |sed 1d >freq
+NIND=`cat bams | wc -l`
+ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
+
 
 #==========================
 # ANDSD => SFS for demographic analysis
