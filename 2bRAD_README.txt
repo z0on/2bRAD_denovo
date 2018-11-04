@@ -370,12 +370,12 @@ cat qranks
 
 #--------------- population structure
 
-# Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); manually remove them from bams list. If you want to detect clones, however, do keep the replicates and analyse identity-by-state (IBS) matrix (explained below)
+# Note: PCA and Admixture are not supposed to be run on data that contain clones or genotyping replicates. For PCA, these can be removed without rerunning ANGSD from the IBS distance matrix; but for ngsAdmix ANGSD must be rerun.
 
 # Generating genotype likelihoods from highly confident (non-sequencing-error) SNPs
 # set minInd to 75-80% of your total number of bams
-
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 25 -baq 1 -dosnpstat 1 -doHWE 1 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
+# if you expect very highly differentiated populations with nearly fixed alternative alleles, remove '-hwe_pval 1e-5' form FILTERS
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 25 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
 TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 3"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
@@ -390,15 +390,14 @@ zcat myresult.mafs.gz | cut -f5 |sed 1d >freq
 NIND=`cat bams | wc -l`
 ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 
-# if coverage is highly unequal among samples, use myresult.covMat and myresult.ibsMat from angsd run for PCoA and PCA. In fact, using these results would be conservative in any case.
 
-# NgsAdmix for K from 2 to 5
+# NgsAdmix for K from 2 to 5 : do not run if the dataset contains clones or genotyping replicates!
 for K in `seq 2 5` ; 
 do 
 NGSadmix -likes myresult.beagle.gz -K $K -P 10 -o mydata_k${K};
 done
 
-# alternatively, to use real ADMIXTURE on called SNPs:
+# alternatively, to use real ADMIXTURE on called SNPs (requires plink and ADMIXTURE):
 gunzip myresult.vcf.gz
 plink --vcf myresult.vcf --make-bed --allow-extra-chr --out myresult
 for K in `seq 1 5`; \
@@ -410,7 +409,7 @@ grep -h CV myresult_*.out
 # scp the *.Q and inds2pops files to laptop, plot it in R:
 # use admixturePlotting2a.R to plot (will require minor editing - population names)
 
-# scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
+# scp *Mat, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
 
 #==========================
 # ANDSD => SFS for demographic analysis
