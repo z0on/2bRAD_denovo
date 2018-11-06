@@ -431,9 +431,9 @@ angsd -b all.bams -GL 1 $FILTERS $DOS -P 1 -out sfsSites
 zcat sfsSites.snpStat.gz | awk '($3+$4+$5+$6)>0' | awk '($12+$13+$14+$15)/($3+$4+$5+$6)<0.5' | cut -f 1,2  >sites2do 
 angsd sites index sites2do
 
-# estimating site frequency likelihoods for each population 
+# estimating site frequency likelihoods for each population, also saving allele frequencies (for genome scan) 
 export GENOME_REF=mygenome.fasta
-TODO="-doSaf 1 -anc $GENOME_REF -ref $GENOME_REF""
+TODO="-doSaf 1 -doMajorMinor 1 -doMaf 1 -doPost 1 -anc $GENOME_REF -ref $GENOME_REF"
 angsd -sites sites2do -b pop0.bams -GL 1 -P 1 $TODO -out pop0
 angsd -sites sites2do -b pop1.bams -GL 1 -P 1 $TODO -out pop1
 
