@@ -375,8 +375,9 @@ cat qranks
 # Generating genotype likelihoods from highly confident (non-sequencing-error) SNPs
 # set minInd to 75-80% of your total number of bams
 # if you expect very highly differentiated populations with nearly fixed alternative alleles, remove '-hwe_pval 1e-5' form FILTERS
+# -doGeno 8 : genotype likelihood format setting for ngsLD; if you want to run PCA, use -doGeno 32 (but I recommend using ibsMat for all ordination work)
 FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 25 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
-TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 2"
+TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 8 -doVcf 1 -doPost 1 -doGlf 2"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
 angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
@@ -384,6 +385,14 @@ angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
 # how many SNPs?
 NSITES=`zcat myresult.mafs.gz | wc -l`
 echo $NSITES
+
+# LD: (use rEM for WGCNA, to look for signatures of polygenic selection):
+NS=`zcat myresult.geno.gz | wc -l`
+NB=`cat bams | wc -l`
+zcat myresult.mafs.gz | tail -n +2 | cut -f 1,2 > mc1.sites
+module load gsl
+ngsLD --geno myresult.geno.gz --probs 1 --n_ind $NB --n_sites $NS --max_kb_dist 0 --pos mc1.sites --out myresult.LD --n_threads 12 --extend_out 1
+
 
 # NgsAdmix for K from 2 to 5 : do not run if the dataset contains clones or genotyping replicates!
 for K in `seq 2 5` ; 
