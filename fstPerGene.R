@@ -38,7 +38,7 @@ i=1;gfst01=c();ns01=0
 pb=txtProgressBar(0,nrow(genes))
 for (i in 1:nrow(genes)) {
 	setTxtProgressBar(pb,i)
-	sub=subset(fst01,contig==genes$contig[i] & pos<=genes$start[i] & pos<=genes$end[i])
+	sub=subset(fst01,contig==genes$contig[i] & pos>=genes$start[i] & pos<=genes$end[i])
 	if (is.null(sub[1,1]) | sum(sub$b)==0) { 
 		gfst01=append(gfst01,NA)
 	} else {
