@@ -431,13 +431,15 @@ ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 # set minInd to 75-90% of the total number fo individuals in the project
 # if you are doing any other RAD than 2bRAD or GBS, remove '-sb_pval 1e-3' from FILTERS
 cat pop0.bams pop1.bams > all.bams
-FILTERS="-minMapQ 30 -minQ 35 -minInd 36 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3 -skipTriallelic 1"
+FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -minInd 36 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3"
 DOS="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -dogeno 3 -doPost 2"
 angsd -b all.bams -GL 1 $FILTERS $DOS -P 1 -out sfsSites
 
-# extracting and indexing list of sites to make SFS from 
+# extracting list of sites to make SFS from 
 # filtering out sites where heterozygote counts comprise more than 50% of all counts (likely lumped paralogs)
-zcat sfsSites.snpStat.gz | awk '($3+$4+$5+$6)>0' | awk '($12+$13+$14+$15)/($3+$4+$5+$6)<0.5' | cut -f 1,2  >sites2do 
+zcat sfsSites.snpStat.gz | awk '($3+$4+$5+$6)>0' | awk '($12+$13+$14+$15)/($3+$4+$5+$6)<0.5' | cut -f 1,2 > sites2do
+
+# indexing sites
 angsd sites index sites2do
 
 # estimating site frequency likelihoods for each population, also saving allele frequencies (for genome scan) 
