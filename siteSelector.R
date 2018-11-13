@@ -18,7 +18,7 @@ for ( i in 1:length(inf)) {
 	}
 }
 message(paste(length(sites),"sites retained"))
-message("writing output: ", paste(inf,"sel",sep="."))
+message("writing output: ", paste(paste(inf,collapse="_"),".sel",sep=""))
 inp[[1]]=inp[[1]][sites,]
 write.table(inp[[1]],file=paste(paste(inf,collapse="_"),".sel",sep=""),col.names=FALSE,row.names=FALSE,quote=FALSE,sep="\t")
 
