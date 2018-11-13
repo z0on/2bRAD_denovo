@@ -18,10 +18,8 @@ for ( i in 1:length(inf)) {
 	}
 }
 message(paste(length(sites),"sites retained"))
-message("writing .sel files...")
-for ( i in 1:length(inf)) {
-	inp[[i]]=inp[[i]][sites,]
-	write.table(inp[[i]],file=paste(inf[[i]],".sel",sep=""),col.names=FALSE,row.names=FALSE,quote=FALSE,sep="\t")
-}
+message("writing output: ",inf[[1]],".sel")
+inp[[1]]=inp[[1]][sites,]
+write.table(inp[[i]],file=paste(inf[[1]],".sel",sep=""),col.names=FALSE,row.names=FALSE,quote=FALSE,sep="\t")
 
 	
