@@ -427,26 +427,33 @@ ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 # make separate files listing bams for each population (without clones and replicates)
 # assume we have two populations, pop0 and pop1, 20 individuals each, with corresponding bams listed in pop0.bams and pop1.bams
 
-# filtering sites to work on - use only filters that do not distort allele frequency
-# set minInd to 75-90% of the total number fo individuals in the project
-# if you are doing any other RAD than 2bRAD or GBS, remove '-sb_pval 1e-3' from FILTERS
-cat pop0.bams pop1.bams > all.bams
-FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -minInd 36 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3"
-DOS="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -dogeno 3 -doPost 2"
-angsd -b all.bams -GL 1 $FILTERS $DOS -P 1 -out sfsSites
+# step 1: creating list of filtered SNP sites for SFS production (note: no filters that distort allele frequency!):
+# sb - strand bias filter; only use for 2bRAD, GBS or WGS (not for ddRAD or RADseq)
+# hetbias - detects weird heterozygotes because they have unequal representation of alleles 
+# hwe - Hardy-Weinberg equilibrium deviation
+FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3 -hwe_pval 1e-3"
+TODO="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -dogeno 3 -doPost 2"
+# ANGSD commands. Note: specify -minInd for each population (~80% of all individuals)
+angsd -b pop0 -GL 1 -P 1 $FILTERS $TODO -minInd 16 -out pop0
+angsd -b pop1 -GL 1 -P 1 $FILTERS $TODO -minInd 16 -out pop1
+# each should take under 1h (with many pops, run them in parallel)
 
 # extracting list of sites to make SFS from 
 # filtering out sites where heterozygote counts comprise more than 50% of all counts (likely lumped paralogs)
-zcat sfsSites.snpStat.gz | awk '($3+$4+$5+$6)>0' | awk '($12+$13+$14+$15)/($3+$4+$5+$6)<0.5' | cut -f 1,2 > sites2do
+zcat pop0.snpStat.gz | awk '($3+$4+$5+$6)>0' | awk '($12+$13+$14+$15)/($3+$4+$5+$6)<0.5' | cut -f 1,2 > pop0sites
+zcat pop1.snpStat.gz | awk '($3+$4+$5+$6)>0' | awk '($12+$13+$14+$15)/($3+$4+$5+$6)<0.5' | cut -f 1,2 > pop1sites
+
+# selecting only sites genotyped in both populations:
+Rscript siteSelector.R pop0sites pop1sites
 
 # indexing sites
-angsd sites index sites2do
+angsd sites index pop0sites_pop1sites.sel
 
 # estimating site frequency likelihoods for each population, also saving allele frequencies (for genome scan) 
 export GENOME_REF=mygenome.fasta
 TODO="-doSaf 1 -doMajorMinor 1 -doMaf 1 -doPost 1 -anc $GENOME_REF -ref $GENOME_REF"
-angsd -sites sites2do -b pop0.bams -GL 1 -P 1 $TODO -out pop0
-angsd -sites sites2do -b pop1.bams -GL 1 -P 1 $TODO -out pop1
+angsd -sites pop0sites_pop1sites.sel -b pop0.bams -GL 1 -P 1 $TODO -out pop0
+angsd -sites pop0sites_pop1sites.sel -b pop1.bams -GL 1 -P 1 $TODO -out pop1
 
 # generating per-population SFS
 realSFS pop0.saf.idx >pop0.sfs
