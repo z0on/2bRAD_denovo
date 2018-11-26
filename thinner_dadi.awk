@@ -23,7 +23,7 @@ if ($(NF-1)!=CHR)
 	}
 else 
 	{
-	if(rand()<($(NF)-POS)/(2*interval))
+	if(rand()<(($(NF)-POS)/interval)^3)
 		{	
 		POS=$(NF)
 		print 
