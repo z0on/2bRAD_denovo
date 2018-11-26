@@ -1,5 +1,5 @@
-# thins dadi formatted file to specified interval between markers *on average*
-# different runs produce slightly different thinning 
+# thins dadi formatted file to specified interval between markers 
+# dadi file must be sorted by chromosome (contig) and position
 # default interval: 250
 # usage:
 # awk -f thinner_dadi.awk -v interval=500 my_dadi.data >dadi_thinned.data
@@ -12,9 +12,10 @@ BEGIN {
 		interval=250
 		print("using default interval:",interval)
 	}
-	srand()
 }
+
 {
+# print("----------\nold:",CHR,POS,"\nnew:",$(NF-1),$(NF))
 if ($(NF-1)!=CHR) 
 	{
 	CHR=$(NF-1)
@@ -23,14 +24,18 @@ if ($(NF-1)!=CHR)
 	}
 else 
 	{
-	if(rand()<(($(NF)-POS)/interval)^3)
+	srand($(NF))
+	roll=rand()
+	test=(($(NF)-POS)/interval)^3
+#	print("roll:",roll,"\ntest:",test)
+	if(roll<test)
 		{	
 		POS=$(NF)
 		print 
 		}
 #	else 
 #		{
-#			print ("skipping ", $(NF-1),$(NF))
+#			print ("\tskipping ", $(NF-1),$(NF))
 #		}
 	}
 }
