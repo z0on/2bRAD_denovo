@@ -1,3 +1,8 @@
+# thins dadi formatted file to specified interval between markers *on average*
+# different runs produce slightly different thinning 
+# default interval: 250
+# usage:
+# awk -f thinner_dadi.awk -v interval=500 my_dadi.data >dadi_thinned.data
 BEGIN {
 	CHR=""
 	POS=0
