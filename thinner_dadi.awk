@@ -6,7 +6,6 @@
 BEGIN {
 	CHR=""
 	POS=0
-#	print("interval:",interval)
 	if (length(interval)==0) 
 	{ 
 		interval=250
@@ -15,7 +14,7 @@ BEGIN {
 }
 
 {
-# print("----------\nold:",CHR,POS,"\nnew:",$(NF-1),$(NF))
+#print("----------\nold:",CHR,POS,"\nnew:",$(NF-1),$(NF))
 if ($(NF-1)!=CHR) 
 	{
 	CHR=$(NF-1)
@@ -24,11 +23,7 @@ if ($(NF-1)!=CHR)
 	}
 else 
 	{
-	srand($(NF))
-	roll=rand()
-	test=(($(NF)-POS)/interval)^3
-#	print("roll:",roll,"\ntest:",test)
-	if(roll<test)
+	if(($(NF)-POS)>interval)
 		{	
 		POS=$(NF)
 		print 
