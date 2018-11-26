@@ -1,7 +1,8 @@
 BEGIN {
 	CHR=""
 	POS=0
-	if(!interval) 
+#	print("interval:",interval)
+	if (length(interval)==0) 
 	{ 
 		interval=250
 		print("using default interval:",interval)
@@ -17,7 +18,7 @@ if ($(NF-1)!=CHR)
 	}
 else 
 	{
-	if(rand()<($(NF)-POS)/interval)
+	if(rand()<($(NF)-POS)/(2*interval))
 		{	
 		POS=$(NF)
 		print 
