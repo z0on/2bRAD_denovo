@@ -174,7 +174,7 @@ while (<VCF>) {
 	next if ($match < ($nreps*$fmatch) );
 	next if ( ($miss/$nreps) > $missing);
 	$pass++;
-	if ($nalt) { $numalt++;} else {	next;}
+	if ($nalt) { $numalt++;} 
 	next if ($altpairs<$altPairs );
 	$altpass++; 
 	next if ( $het<$hetPairs );
@@ -187,8 +187,8 @@ while (<VCF>) {
 	elsif (!$polyonly){
 		if ($nalt) {
 			$numout++;
-			print join("\t",@start)."\t".join("\t",@lin)."\n";
 		}
+		print join("\t",@start)."\t".join("\t",@lin)."\n";
 	}
 }
 warn "

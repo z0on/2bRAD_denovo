@@ -2,8 +2,12 @@ plotAdmixture=function(data,npops,colors=NA,ord=NULL,angle=0,space=0,grouping.me
 #data=tbl;npops=2;colors=NA;angle=0;ord=NULL;cluster.method="average"
 	tbl=data
 	require(colorspace)
+	require(RColorBrewer)
+	??RColorBrewer
 	if (is.na(colors[1])){
-		 colors=diverge_hcl(n=npops,h = c(260, 0), c = 100, l = c(50, 90), power = 1, fixup = TRUE, gamma = NULL, ...)
+		 colors=brewer.pal(npops,"Set1")
+#		 colors=diverge_hcl(n=npops,h = c(270, 0), c = 100, l = c(50, 90), power = 1, fixup = TRUE, ...)
+#		 colors=heat_hcl(n=npops,h = c(260, 0), c = 100, l = c(50, 90), power = 1, fixup = TRUE, ...)
 	}
 	p=levels(data$pop)[1]
 	tsort=c()
@@ -51,3 +55,5 @@ plotAdmixture=function(data,npops,colors=NA,ord=NULL,angle=0,space=0,grouping.me
 #	return(tsort)
 	return(row.names(tsort))
 }
+	
+	
