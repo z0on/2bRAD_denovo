@@ -263,46 +263,36 @@ ls *.trim | perl -pe 's/^(.+)$/uniquerOne.pl $1 >$1\.uni/' >unii
 # Done! do you have .uni for all your samples?... 
 ls -l *.uni | wc -l  
 
-# merging uniqued files, creating mergedUniqTags.fasta for clustering 
-# set minInd to 1/3rd of all your individuals 
-# (assuming we want to assemble fake reference genome out of these tags, we only
+# merging uniqued files, creating fasta fiels of major alleles  
+# set minInd to 70% of all your individuals 
+# (assuming we want to assemble fake reference genome for ampping, we only
 # need to capture major alleles at each locus)
-# set minDP to even higher value (total depth), something like 2 x minInd
-mergeUniq.pl uni minDP=50 minInd=25 >all.uniq
+mergeUniq.pl uni minInd=48 >all.uniq
 
 # discarding tags that have more than 7 observations without reverse-complement
-head -1 all.uniq >all.tab
-awk '!($3>7 && $4==0)' all.uniq >>all.tab
+awk '!($3>7 && $4==0) && $2!="seq"' all.uniq >all.tab
 
-# creating fasta file out of merged and filtered tags:
-awk '{print ">"$1"\n"$2}' all.tab | tail -n +3 > all.fasta
-
-# clustering reads into loci using cd-hit
-# clustering allowing for not more than 2e mismatcsh (-c 0.94); the most abundant sequence becomes reference
-cd-hit-est -i all.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.94 -M 0 -T 0  
+# creating fasta file out of merged and filtered major-allele tags:
+awk '{print ">"$1"\n"$2}' all.tab > all.fasta
 
 #------------
-# making fake reference genome (of 30 chromosomes) out ot cd-hit cluster representatives
-# need bowtie2, samtools and picard for indexing
+# making fake reference genome (of 30 chromosomes) out of major-allele tags
+# need bowtie2 and samtools for indexing
 
-concatFasta.pl fasta=cdh_alltags.fas num=30
+concatFasta.pl fasta=all.fas num=30
 
 # formatting fake genome
-export GENOME_FASTA=cdh_alltags_cc.fasta
-export GENOME_DICT=cdh_alltags_cc.dict 
-module load perl
-module load bowtie
+export GENOME_FASTA=all_cc.fasta
+export GENOME_DICT=all_cc.dict 
 bowtie2-build $GENOME_FASTA $GENOME_FASTA
-module load samtools
 samtools faidx $GENOME_FASTA
-module load picard-tools
-java -jar $TACC_PICARD_T_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
+java -jar $WHERE_PICARD_IS/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
 
 #==============
 # Mapping reads to reference (reads-derived fake one, or real) and formatting bam files 
 
 # for denovo: map reads to fake genome with bowtie2: 
-GENOME_FASTA=cdh_alltags_cc.fasta
+GENOME_FASTA=all_cc.fasta
 >maps
 for F in `ls *.trim`; do
 echo "bowtie2 --no-unal -x $GENOME_FASTA -U $F -S $F.sam">>maps
