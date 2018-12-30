@@ -263,27 +263,27 @@ ls *.trim | perl -pe 's/^(.+)$/uniquerOne.pl $1 >$1\.uni/' >unii
 # Done! do you have .uni for all your samples?... 
 ls -l *.uni | wc -l  
 
-# merging uniqued files, creating fasta fiels of major alleles  
-# set minInd to 70% of all your individuals 
-# (assuming we want to assemble fake reference genome for ampping, we only
-# need to capture major alleles at each locus)
-mergeUniq.pl uni minInd=48 >all.uniq
+# merging uniqued files (set minInd to >10, or >10% of total number of samples, whichever is greater)
+mergeUniq.pl uni minInd=10 >all.uniq
 
 # discarding tags that have more than 7 observations without reverse-complement
 awk '!($3>7 && $4==0) && $2!="seq"' all.uniq >all.tab
 
-# creating fasta file out of merged and filtered major-allele tags:
+# creating fasta file out of merged and filtered tags:
 awk '{print ">"$1"\n"$2}' all.tab > all.fasta
+
+# clustering allowing for up to 3 mismatches (-c 0.91); the most abundant sequence becomes reference
+cd-hit-est -i all.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.91 -M 0 -T 0  
 
 #------------
 # making fake reference genome (of 30 chromosomes) out of major-allele tags
 # need bowtie2 and samtools for indexing
 
-concatFasta.pl fasta=all.fas num=30
+concatFasta.pl fasta=cdh_alltags.fas num=30
 
 # formatting fake genome
-export GENOME_FASTA=all_cc.fasta
-export GENOME_DICT=all_cc.dict 
+export GENOME_FASTA=cdh_alltags_cc.fasta
+export GENOME_DICT=cdh_alltags_cc.dict 
 bowtie2-build $GENOME_FASTA $GENOME_FASTA
 samtools faidx $GENOME_FASTA
 java -jar $WHERE_PICARD_IS/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
@@ -292,7 +292,7 @@ java -jar $WHERE_PICARD_IS/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  
 # Mapping reads to reference (reads-derived fake one, or real) and formatting bam files 
 
 # for denovo: map reads to fake genome with bowtie2: 
-GENOME_FASTA=all_cc.fasta
+GENOME_FASTA=cdh_alltags_cc.fasta
 >maps
 for F in `ls *.trim`; do
 echo "bowtie2 --no-unal -x $GENOME_FASTA -U $F -S $F.sam">>maps
