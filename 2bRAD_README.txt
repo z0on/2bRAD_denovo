@@ -33,6 +33,8 @@ python setup.py build_ext --inplace
   export PYTHONPATH=$PYTHONPATH:$HOME/moments
 # re-login
 
+# NOTA BENE: on ls5, must replace 'set_axis_bgcolor' with 'set_facecolor' in moments script ModelPlot.py (in moments directory, typically, $HOME/moments/moments/)
+
 cds
 cd RAD
 
@@ -342,7 +344,7 @@ export GENOME_REF=mygenome.fasta
 # -baq 1 : realign around indels (not terribly relevant for 2bRAD reads mapped with --local option) 
 # -maxDepth : highest total depth (sum over all samples) to assess; set to 10x number of samples
 
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -baq 1 -ref $GENOME_REF -maxDepth 1000"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -skipTriallelic 1 -minMapQ 20 -baq 1 -ref $GENOME_REF -maxDepth 1000"
 
 # T O   D O : 
 TODO="-doQsDist 1 -doDepth 1 -doCounts 1 -dumpCounts 2"
@@ -366,7 +368,7 @@ cat qranks
 # set minInd to 75-80% of your total number of bams
 # if you expect very highly differentiated populations with nearly fixed alternative alleles, remove '-hwe_pval 1e-5' form FILTERS
 # -doGeno 8 : genotype likelihood format setting for ngsLD; if you want to run PCA, use -doGeno 32 (but I recommend using ibsMat for all ordination work)
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 25 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -skipTriallelic 1 -minMapQ 20 -minQ 25 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
 TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 8 -doVcf 1 -doPost 1 -doGlf 2"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
@@ -421,8 +423,9 @@ ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 # sb - strand bias filter; only use for 2bRAD, GBS or WGS (not for ddRAD or RADseq)
 # hetbias - detects weird heterozygotes because they have unequal representation of alleles 
 # hwe - Hardy-Weinberg equilibrium deviation
-FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3 -hwe_pval 1e-3"
-TODO="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -dogeno 3 -doPost 2"
+export GENOME_REF=$WHERE_GENOME_IS/mygenome.fasta
+FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -doHWE 1 -sb_pval 1e-3 -hetbias_pval 1e-3 -hwe_pval 5e-2"
+TODO="-doSaf 1 -doMajorMinor 1 -doMaf 1 -dosnpstat 1 -dogeno 3 -doPost 2 -doGlf 4 -anc $GENOME_REF -ref $GENOME_REF"
 # ANGSD commands. Note: specify -minInd for each population (~80% of all individuals)
 angsd -b pop0 -GL 1 -P 1 $FILTERS $TODO -minInd 16 -out pop0
 angsd -b pop1 -GL 1 -P 1 $FILTERS $TODO -minInd 16 -out pop1
