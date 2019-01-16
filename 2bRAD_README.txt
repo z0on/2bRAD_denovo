@@ -430,7 +430,7 @@ angsd -b bams -GL 1 -P 1 $FILTERS $TODO -out sfilt
 # filtering out sites where heterozygotes likely comprise more than 50% of all genotypes (likely lumped paralogs)
 # (this fuzzy procedure and HetMajorityProb.py script have been developed by Nathaniel "Nate" S. Pope, nspope@utexas.edu, at UT Austin) 
 # NOTE: this step requires python with numpy and scipy; also the file poibin.py (included in the repo) should be placed in your PYTHONPATH
-zcat sfilt.geno.gz | python HetMajorityProb.py | awk '\$6 < 0.75 {print \$1\"\\t\"\$2}' > allSites
+zcat sfilt.geno.gz | python ~/bin/HetMajorityProb.py | awk '\$6 < 0.75 {print \$1\"\\t\"\$2}' > allSites
 
 # estimating site frequency likelihoods for each population, also saving allele frequencies (for genome scan) 
 export GENOME_REF=mygenome.fasta

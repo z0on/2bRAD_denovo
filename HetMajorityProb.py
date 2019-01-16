@@ -1,7 +1,7 @@
 # fuzzy calculator of probability that heterozygotes constitute 
 # the majority of calls for a given site
 # (for filtering out lumped paralogs)
-# by Nate Pope (nspope@utexas.edu)
+# by Nathaniel "Nate" S. Pope (nspope@utexas.edu)
 
 # uses output by ANGSD run with options "-doPost 2 -doGeno 11"
 # output: contig, position, number non-missing samples, number "hard-called" heterozygotes, 
