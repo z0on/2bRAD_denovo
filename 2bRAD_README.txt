@@ -424,7 +424,7 @@ ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 # set minInd to 80-90% of all your individuals (depending on the results from quality control step)
 FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 20 -minQ 25 -doHWE 1 -sb_pval 1e-5 -hetbias_pval 1e-5 -minInd 18 "
 TODO="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doPost 2 -doGeno 11"
-# ANGSD commands. Note: specify -minInd for each population (~80% of all individuals)
+# ANGSD command:
 angsd -b bams -GL 1 -P 1 $FILTERS $TODO -out sfilt
 
 # filtering out sites where heterozygotes likely comprise more than 50% of all genotypes (likely lumped paralogs)
