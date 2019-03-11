@@ -265,6 +265,7 @@ ls *.trim | perl -pe 's/^(.+)$/uniquerOne.pl $1 >$1\.uni/' >unii
 # Done! do you have .uni for all your samples?... 
 ls -l *.uni | wc -l  
 
+# collecting common tags (= major alleles)
 # merging uniqued files (set minInd to >10, or >10% of total number of samples, whichever is greater)
 mergeUniq.pl uni minInd=10 >all.uniq
 
@@ -337,14 +338,12 @@ ls *bam >bams
 
 #----------- assessing base qualities and coverage depth
 
-export GENOME_REF=mygenome.fasta
-
 # angsd settings:
 # -minMapQ 20 : only highly unique mappings (prob of erroneous mapping = 1%)
 # -baq 1 : realign around indels (not terribly relevant for 2bRAD reads mapped with --local option) 
 # -maxDepth : highest total depth (sum over all samples) to assess; set to 10x number of samples
 
-FILTERS="-uniqueOnly 1 -remove_bads 1 -skipTriallelic 1 -minMapQ 20 -baq 1 -ref $GENOME_REF -maxDepth 1000"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -maxDepth 1000"
 
 # T O   D O : 
 TODO="-doQsDist 1 -doDepth 1 -doCounts 1 -dumpCounts 2"
@@ -368,7 +367,7 @@ cat qranks
 # set minInd to 75-80% of your total number of bams
 # if you expect very highly differentiated populations with nearly fixed alternative alleles, remove '-hwe_pval 1e-5' form FILTERS
 # -doGeno 8 : genotype likelihood format setting for ngsLD; if you want to run PCA, use -doGeno 32 (but I recommend using ibsMat for all ordination work)
-FILTERS="-uniqueOnly 1 -remove_bads 1 -skipTriallelic 1 -minMapQ 20 -minQ 25 -dosnpstat 1 -doHWE 1 -hwe_pval 1e-5 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -skipTriallelic 1 -minMapQ 20 -minQ 25 -dosnpstat 1 -doHWE 1 -sb_pval 1e-5 -hetbias_pval 1e-5 -skipTriallelic 1 -minInd 1000 -snp_pval 1e-5 -minMaf 0.05"
 TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 8 -doVcf 1 -doPost 1 -doGlf 2"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
@@ -411,6 +410,8 @@ grep -h CV myresult_*.out
 zcat myresult.mafs.gz | cut -f5 |sed 1d >freq
 NIND=`cat bams | wc -l`
 ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
+
+bads=c("K4","O5","K211","K212","K210","K213","K219")
 
 #==========================
 # ANDSD => SFS for demographic analysis
