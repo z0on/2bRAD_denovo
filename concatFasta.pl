@@ -34,7 +34,7 @@ my $nc = 10;
 if (" @ARGV "=~/num=(\d+)/) { $nc=$1; }
 #my $bl = 100;
 #if (" @ARGV "=~/blocks=(\d+)/) { $bl=$1; }
-my $maxlen=100000000;
+my $maxlen=200000000;
 
 my $l=`grep ">" $fas | wc -l`;
 chop $l;
@@ -69,11 +69,10 @@ while (<INP>) {
 			print {OUTT} "\t",length($seq)+1,"\t",length($seq)+length($seq1),"\t",$defline,"\n";
 			$seq.=$seq1;
 			$counter++;
-			if (length($seq)>$maxlen) { goto DUMP; }
+            if (length($seq)>$maxlen) { break; }
 #warn "$chrom\t",length($seq),"\n";
-		}
-		if ($counter>$chunk) {
-			DUMP:
+	   }
+	   if ($counter>$chunk || length($seq)>$maxlen) {
 			$k++;
 			$seq=~s/(.{100})/$1\n/g; # wraps lines in blocks of 100
 			print {OUTF} ">$chrom\n$seq\n";

@@ -282,7 +282,7 @@ cd-hit-est -i all.fasta -o cdh_alltags.fas -aL 1 -aS 1 -g 1 -c 0.91 -M 0 -T 0
 # making fake reference genome (of 30 chromosomes) out of major-allele tags
 # need bowtie2 and samtools for indexing
 
-concatFasta.pl fasta=cdh_alltags.fas num=30
+concatFasta.pl fasta=cdh_alltags.fas num=20
 
 # formatting fake genome
 export GENOME_FASTA=cdh_alltags_cc.fasta
@@ -317,11 +317,13 @@ ls *.sam > sams
 cat sams | wc -l  # number should match number of trim files
 
 # next stage is compressing, sorting and indexing the SAM files, so they become BAM files:
-cat sams | perl -pe 's/(\S+)\.sam/samtools import mygenome\.fasta $1\.sam $1\.unsorted\.bam && samtools sort -o $1\.sorted\.bam $1\.unsorted\.bam && java -Xmx5g -jar \$TACC_PICARD_T_DIR\/picard\.jar AddOrReplaceReadGroups INPUT=$1\.sorted\.bam OUTPUT=$1\.bam RGID=group1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$1 && samtools index $1\.bam/' >s2b
+module load samtools
+>s2b
+for file in *.sam; do
+echo "samtools sort -O bam -o ${file/.sam/}.bam $file && samtools index ${file/.sam/}.bam">>s2b;
+done
 
 # run all commands listed in s2b file
-
-rm *sorted*
 ls *bam | wc -l  # should be the same number as number of trim files
 
 # BAM files are the input into various genotype calling / popgen programs, this is the main interim result of the analysis. Archive them.
