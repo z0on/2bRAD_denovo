@@ -82,8 +82,8 @@ while (<VCF>) {
 		next;
 	}
 	$info=$dats[7];
-	if ($info=~/AF=([\d\.]*?)/) { $af=$1; } else { warn "no AF:\n@dats\n" and next;}
-	if ($info=~/DP=(\d*?);/) { $dp=$1; } else { warn "no DP:\n@dats\n" and next;}
+	if ($info=~/AF=(\S*?);/ | $info=~/AF=([^;]*?)$/) { 	$af=$1; } else { warn "no AF:\n@dats\n" and next;}
+	if ($info=~/DP=(\d*?);/ | $info=~/DP=([^;]*?)$/) { $dp=$1; } else { warn "no DP:\n@dats\n" and next;}
 	if ($af>0.5) { $af=1-$af; }
 	if (($pos-$pos0 < $inter) and ($chrom eq $chrom0)){
 #warn "\t pos:$pos - interval:",$pos0,"-",$pos0+$inter," - poslast:$poslast\n";
@@ -186,7 +186,6 @@ if ($snps[0]){
 
 warn "
 $total total loci
-$skipped loci skipped because they were closer than ",$inter/2,"
 $selected loci selected
 
 ";
