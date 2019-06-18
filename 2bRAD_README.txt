@@ -289,6 +289,8 @@ export GENOME_FASTA=cdh_alltags_cc.fasta
 export GENOME_DICT=cdh_alltags_cc.dict 
 bowtie2-build $GENOME_FASTA $GENOME_FASTA
 samtools faidx $GENOME_FASTA
+
+# skip this one if you don't plan to use GATK:
 java -jar $WHERE_PICARD_IS/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
 
 #==============
