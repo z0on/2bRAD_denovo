@@ -3,7 +3,7 @@ Whole genome de novo genotyping with 2bRAD
 
 Mikhail Matz, matz@utexas.edu
 
-Current protocol (feel free to comment): https://docs.google.com/document/d/1am7L_Pa5JQ4sSx0eT5j4vdNPy5FUAtMZRsJZ0Ar5g9U/edit?usp=sharing
+Current sample preparation protocol (feel free to comment!): https://docs.google.com/document/d/1am7L_Pa5JQ4sSx0eT5j4vdNPy5FUAtMZRsJZ0Ar5g9U/edit?usp=sharing
 
 2bRAD has been described in Wang et al 2012 
 http://www.nature.com/nmeth/journal/v9/n8/abs/nmeth.2023.html 
