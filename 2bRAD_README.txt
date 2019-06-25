@@ -22,6 +22,12 @@ nano .bashrc
 
 re-login to make PATH changes take effect
 
+------- cutadapt: 
+
+cdh
+pip install --user cutadapt
+cp .local/bin/cutadapt ~/bin
+
 ------- Moments: 
 
 cd
@@ -239,17 +245,22 @@ bash trims
 # do we have expected number of *.tr0 files created?
 ls -l *.tr0 | wc -l
 
-# quality filtering using fastx_toolkit (install fastx_toolkit if you don't have this module)
-module load fastx_toolkit
-ls *.tr0 | perl -pe 's/^(\S+)\.tr0$/cat $1\.tr0 \| fastq_quality_filter -q 20 -p 100 >$1\.trim/' >filt0
+# quality filtering using cutadapt (see installation above)
+module load cutadapt 
 
-# NOTE: run the next line ONLY if your qualities are 33-based 
-# (if you don't know just try to see if it works eventually, if you get errors from fastx_toolkit, try the other one):
-	cat filt0 | perl -pe 's/filter /filter -Q33 /' > filt
-#if you did NOT run the line above, run this one (after removing # symbol):
-#	mv filt0 filt
+# for de novo analysis: removing reads with qualities at ends less than Q15
+>trimse
+for file in *.tr0; do
+echo "cutadapt --format fastq -q 15,15 -m 36 -o ${file/.tr0/}.trim $file > ${file}_trimlog.txt" >> trimse;
+done
 
-# execute all commands in filt file (serial or parallel using Launcher, if your system allows) 
+# for reference-based analysis: trimming poor quality bases off ends:
+>trimse
+for file in *.tr0; do
+echo "cutadapt --format fastq -q 15,15 -m 25 -o ${file/.tr0/}.trim $file > ${file}_trimlog.txt" >> trimse;
+done
+
+# execute all commands in trimse file (serial or parallel using Launcher, if your system allows) 
 
 # do we have expected number of *.trim files created?
 ls -l *.trim | wc -l
@@ -528,6 +539,8 @@ ind2	pop0
 ind3	pop1
 ind4	pop1
 
+
+
 # create a file called vcf2bayescan.spid containing this text:
 echo "############
 # VCF Parser questions
@@ -561,7 +574,7 @@ GESTE_BAYE_SCAN_WRITER_DATA_TYPE_QUESTION=SNP
 ############" >vcf2bayescan.spid
 
 # converting vcf (either myresult.vcf from ANGSD or the one from GATK) to bayescan format
-java -Xmx1024m -Xms512m -jar ~/bin/PGDSpider_2.0.7.1/PGDSpider2-cli.jar -inputfile myresult.vcf -outputfile Best.bayescan -spid vcf2bayescan.spid 
+java -Xmx1024m -Xms512m -jar ~/bin/PGDSpider_2.0.7.1/PGDSpider2-cli.jar -inputfile OKbs.vcf -outputfile Best.bayescan -spid vcf2bayescan.spid 
 
 # launching bayescan (this might take 12-24 hours)
 bayescan Best.bayescan -threads=20
