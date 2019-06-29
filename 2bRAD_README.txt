@@ -123,22 +123,23 @@ cp ngsLD ~/bin
 
 # project page: https://sites.google.com/site/jpopgen/stairway-plot
 cdw
-# get version from June 2016 (v2beta)
-wget https://www.dropbox.com/s/tj4i02n36abwjl6/stairway_plot_v0.2.zip?dl=0
-mv file stairway_plot_v0.2.zip
-unzip stairway_plot_v0.2.zip
+# get version from June 2016 (v2beta2)
+wget https://www.dropbox.com/s/toxnlvk8rhe1p5h/stairway_plot_v2beta2.zip
+unzip stairway_plot_v2beta2.zip
+mv stairway_plot_v2beta2 stairway_plot_v2beta
 
 -------  ADMIXTURE
+
 cd ~/bin/
-wget https://www.genetics.ucla.edu/software/admixture/binaries/admixture_linux-1.23.tar.gz --no-check-certificate
-tar vxf admixture_linux-1.23.tar.gz 
-mv admixture_linux-1.23/admixture .
+wget http://software.genetics.ucla.edu/admixture/binaries/admixture_linux-1.3.0.tar.gz --no-check-certificate
+tar vxf admixture_linux-1.3.0.tar.gz 
+mv admixture_linux-1.3.0/admixture .
 cd -
 
 -------  plink 1.9:
 cd ~/bin
-wget https://www.cog-genomics.org/static/bin/plink171103/plink_linux_x86_64.zip
-unzip plink_linux_x86_64.zip
+wget http://s3.amazonaws.com/plink1-assets/plink_linux_x86_64_20190617.zip
+unzip plink_linux_x86_64_20190617.zip
 cd -
 
 -------  PopGenTools (angsd wrapper and format converter) :
