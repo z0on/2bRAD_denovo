@@ -36,5 +36,5 @@ for (g in levels(sfs$Gene)) {
 }
 message(paste(nrow(sfs),"sites total"))
 message(paste(nrow(resfs),"selected"))
-write.table(resfs,file=paste("thin",di,infile[1],sep="_"))
+write.table(resfs,file=paste("thin",di,infile[1],sep="_"),sep="\t",quote=F,row.names=F)
 

@@ -3,11 +3,10 @@ plotAdmixture=function(data,npops,colors=NA,ord=NULL,angle=0,space=0,grouping.me
 	tbl=data
 	require(colorspace)
 	require(RColorBrewer)
-	??RColorBrewer
 	if (is.na(colors[1])){
-		 colors=brewer.pal(npops,"Set1")
-#		 colors=diverge_hcl(n=npops,h = c(270, 0), c = 100, l = c(50, 90), power = 1, fixup = TRUE, ...)
-#		 colors=heat_hcl(n=npops,h = c(260, 0), c = 100, l = c(50, 90), power = 1, fixup = TRUE, ...)
+	    colors=c("tomato", "lightblue", "wheat","olivedrab", "cyan3","hotpink","gold","orange")
+#		 colors=diverge_hcl(n=npops,h = c(270, 0), c = 100, l = c(50, 90), power = 1, fixup = TRUE)
+#		 colors=heat_hcl(n=npops,h = c(260, 0), c = 100, l = c(50, 90), power = 1, fixup = TRUE)
 	}
 	p=levels(data$pop)[1]
 	tsort=c()
@@ -37,20 +36,20 @@ plotAdmixture=function(data,npops,colors=NA,ord=NULL,angle=0,space=0,grouping.me
 		tsort=tbl[ord,]
 	}
 	midpts=barplot(t(as.matrix(tsort[1:npops])), col=colors,xlab="population", space=space,ylab="Ancestry", border=NA, xaxt="n",mgp=c(2,1,0))
-	pops=levels(tbl$pop)
+	pops=unique(as.character(tsort$pop))
 	np=0;lp=0;lpoints=c()
 	abline(v=0)
 	abline(h=1,lwd=1)
 	abline(h=0,lwd=1)
 	for( p in pops) {
-		np0=table(tbl$pop==p)[2]
+		np0=table(tsort$pop==p)[2]
 		lp0=np0/2
 		lp=np+lp0
 		np=np+np0
 		lpoints=append(lpoints,lp)
 		abline(v=np)
 	}
-	text(as.numeric(lpoints)+3.5+hshift,par("usr")[3]-0.1-vshift,labels=pops,xpd=TRUE, srt=angle, pos=2)
+	text(as.numeric(lpoints)+3.5+hshift,par("usr")[3]-vshift,labels=pops,xpd=TRUE, srt=angle, pos=2,...)
 	row.names(tsort)=tsort$ind
 #	return(tsort)
 	return(row.names(tsort))
