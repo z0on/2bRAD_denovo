@@ -447,7 +447,7 @@ angsd -b bams -GL 1 -P 1 $FILTERS $TODO -out sfilt
 # filtering out sites where heterozygotes likely comprise more than 50% of all genotypes (likely lumped paralogs)
 # (this fuzzy procedure and HetMajorityProb.py script have been developed by Nathaniel "Nate" S. Pope, nspope@utexas.edu, at UT Austin) 
 # NOTE: this step requires python with numpy and scipy; also the file poibin.py (included in the repo) should be placed in your PYTHONPATH
-zcat sfilt.geno.gz | python ~/bin/HetMajorityProb.py | awk '\$6 < 0.75 {print \$1\"\\t\"\$2}' > allSites
+zcat sfilt.geno.gz | python ~/bin/HetMajorityProb.py | awk "\$6 < 0.75 {print \$1\"\t\"\$2}" > allSites
 angsd sites index allSites
 
 # estimating site frequency likelihoods for each population, also saving allele frequencies (for genome scan) 
@@ -499,7 +499,7 @@ IN="2pops_dadi.data pop0 pop1 36 36 0.02 0.005"
 # after setting the $IN variable, execute all commands listed in the text file "allmodels_unfolded" (if your alleles are polarized into ancestral and derived, for example by mapping to a sister species genome) or "allmodels_folded" 
 
 # collecting results while fixing broken lines
-cat *.mom | perl -pe 's/RESULT(.+)(\d)\n/RESULT$1$2/' |perl -pe 's/RESULT(.+)(\d)\n/RESULT$1$2/' |perl -pe 's/RESULT(.+)(\d)\n/RESULT$1$2/' | perl -pe 's/RESULT(.+)([\d\s])\n/RESULT$1$2/' | grep RESULT > mmods.res
+grep RESULT *.mom -A 4 | grep -v Launcher | grep -E "[0-9]|\]" | perl -pe 's/\n//' | perl -pe 's/RESULT/\nRESULT/g' >mmods.res
 
 # extracting likelihoods and parameter numbers for AIC:
 cut -f 2,3,4,5 -d " " mmods.res >likes

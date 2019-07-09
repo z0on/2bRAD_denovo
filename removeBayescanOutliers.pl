@@ -40,7 +40,7 @@ while(<BS>) {
 # warn "q: $qval\n";
 	if ($qval<$fdr) { 
 		push @outs, $splits[0];
-		warn "outlier : ",$_,"\n";
+#		warn "outlier : ",$_,"\n";
 	}
 }
 close BS;
