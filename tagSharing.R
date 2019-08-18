@@ -1,103 +1,94 @@
 # reading tags table
-tg=read.table("5to50.uniq",sep="\t",header=T)
-# histogram of counts
-hist(log(tg$count,10),breaks=150)
+tg=read.table("allTags.uniq",sep="\t",header=T)
 
 # creating a tag presence-absence matrix
-tgis=tg
-row.names(tgis)=tgis[,1]
-tgis=tgis[,-c(1:4)]
-tgis=tgis>0
-head(tgis)
+tgg=tg[,-c(1:4)]
+tgis=tgg>0
 
 # individuals per tag:
 indcover=apply(tgis,1,sum)
+hist(log(indcover,10))
 
 # tags per individual:
 tperi=apply(tgis,2,sum)
-hist(tperi,breaks=20)
-# recording outliers (too few tags) - change 40000 in the next line to whatever number makes sense for you as the low cutoff 
-outliers=names(tperi)[tperi<40000]
+hist(log(tperi,10),breaks=50)
 
-#------------
-# removing outliers and filtering
+# reads per individual:
+rperi=apply(tgg,2,sum)
+hist(log(rperi,10),breaks=50)
 
-tg1=tg[,!(colnames(tg) %in% outliers)]
-tgis1=tgis[,!(colnames(tgis) %in% outliers)]
+plot(tperi~rperi)
+plot(tperi~rperi,log="xy")
 
-indcover=apply(tgis1,1,sum)
-# retaining only tags shared among at least 5 and at most 20 individuals - change 20 to 1.5x number of samples per population in your study
-goods=which(indcover>=5 & indcover<=20 & tg1$count>10 & tg1$count<3000)
-length(goods) 
+save(tgg,file="tgAll.RData")
 
-tgis2=tgis1[goods,]
-tg2=tg1[goods,]
+#---------------- calculating chunks for parlellizing calculations
 
-save(tgis2,tg2,file="cleanedRaw_5to20.RData")
-#----------------
-# calculating tag sharing
-load("cleanedRaw_5to20.RData")
-write.table(tg2[,5:ncol(tg2)],sep="\t",row.names=F,quote=F,file="tgAll_5to20.tab")
+x=1:ncol(tgg)
+nc=ncol(tgg)-x
+ncomp=sum(nc)
+cum=c();thrds=36;chunks=list();start=1
+th=1
+for (i in x) {
+	cum[i]=sum(nc[1:i])
+	if(cum[i]>(ncomp/thrds)*th) {
+		chunks[[th]]=data.frame(start=start,end=i)
+		th=th+1
+		start=i+1
+	}
+}
+chunks[[th]]=data.frame(start=start,end=ncol(tgg))
 
-system('Rscript TagSharing_auto.R infile=tgAll_5to20.tab boot=0 nreps=3')
-load("tgAll_5to20.tab_tagshare.RData")
+# printing commands to run:
+for (i in 1:th) {
+message(paste("Rscript TagSharing_auto.R infile=tgAll.RData nreps=3 first=",chunks[[i]]$start," last=",chunks[[i]]$end,sep=""))
+}
+# copy the printed commands, scp TagSharing_v2.R and tgAll.tab to a cluster, run them in parallel (note: if the tag table is large, each task might require 2-4G of RAM)
+# scp all the resulting *tagshare.RData files back to laptop
 
-# hierarchical clustering, to display where clones are
+#--------------- assembling results
+
+ts=matrix(0,nrow=ncol(tgis),ncol=ncol(tgis))
+samples=colnames(tgis)
+dimnames(ts)=list(samples,samples)
+i=2
+library(pheatmap)
+for (i in 1:th) {
+	fname=paste("tgALL.RData_",chunks[[i]]$start,"_",chunks[[i]]$end,"_tagshare.RData",sep="")
+	message(fname)
+	load(fname)
+	ts=ts+stre
+#	ts[1:20,1:20]
+#	pheatmap(ts,cluster_rows=F,cluster_cols=F)
+}
+diag(ts)=1
+strd=1-ts
+message(paste("min off-diag distance:",round(min(strd[lower.tri(strd)]),3),"max distance:",round(max(strd),3)))
+message(paste("number of negative distances (will be converted to 0's):", sum(strd<0),"\n"))
+strd[strd<0]=0
+
+#---- hierarchical clustering, to display where clones are
+
 hc=hclust(as.dist(strd),"ave")
-plot(hc,cex=0.7)
+plot(hc,cex=0.6)
 
-#-------------
-# re-scaling based on clones (skip this if you don't have genotyping replicates)
+#---- coloring tree by read cover
 
-load("tgAll_5to20.tab_tagshare.RData")
+require(sparcl)
 
-# reading table of pairs of replicates 
-clonepairs=read.table("clonepairs.tab",sep="\t")
-repsa= clonepairs[,1]
-repsb= clonepairs[,2]
-
-# computing median similarity between clones
-cd=c()
-stre=1-strd
-for (i in 1:length(reps)) {
-	cd=append(cd,stre[repsa[i],repsb[i]])
-}
-cloneSim=median(cd)
-
-# rescaling to clones similarity, equating all clone pairs to similarity of 1
-stre2=stre/cloneSim
-diag(stre2)=1
-for (i in 1:length(reps)) {
-	stre2[repsa[i],repsb[i]]=1
-	stre2[repsb[i],repsa[i]]=1
-}
-strd2=1-stre2
-
-# rescaled clustering tree:
-hc=hclust(as.dist(strd2),"ave")
-plot(hc,cex=0.5)
-
-#-------------
-# removing extra clones 
-
-Goods=which(!(row.names(strd2) %in% repsb))
-stnr2=strd2[Goods,Goods]
-
-# how does clustering tree look without clonemates?
-hc=hclust(as.dist(stnr2),"ave")
-plot(hc,cex=0.5)
-
-save(stnr2,file="5to20_rescaled_NR.RData")
+cover=rep("red",nrow(strd))
+cover[rperi>quantile(rperi,0.1)]="gold"
+cover[rperi>quantile(rperi,0.2)]="black"
+#pdf("colorclones_byCover.pdf",width=80,height=10)
+ColorDendrogram(hc, y = cover,branchlength=0.2,labels=colnames(strd),cex=0.6)
+#dev.off()
 
 #------------
 # pcoa and "constrained analysis of proximities" (cap)
 
-ll=load("5to20_rescaled_NR.RData")
-
 # loading individual to population correspondences
 i2p=read.table("inds2pops",sep="\t")
 row.names(i2p)=i2p[,1]
-i2p=i2p[Goods,]
 site=i2p[,2]
 
 # setting color scheme
@@ -109,14 +100,12 @@ colpops=as.numeric(as.factor(sort(unique(site))))
 library(vegan) 
 conds=data.frame(cbind(site))
 # unconcstrained (=PCoA)
-pp0=capscale(as.dist(stnr2)~1)
+pp0=capscale(as.dist(strd)~1)
 # constrained (displaying variation of interest first)
-pp=capscale(as.dist(stnr2)~site,conds)
+pp=capscale(as.dist(strd)~site,conds)
 
 # testing if site is significant
-adonis(as.dist(stnr2)~site,conds)
-# site       2    0.7688 0.38438  3.7254 0.1156  0.001 ***
-# Residuals 57    5.8812 0.10318         0.8844           
+adonis(as.dist(strd)~site,conds)
 
 # how many intereting PCs we have in unconstrained PCoA
 plot(pp0$CA$eig)
@@ -148,9 +137,9 @@ quartz()
 # perplexity: expected number of neighbors. Set to 0.5x of N samples/pop
 perp=10
 # execute to the end, watch the learning process on the plot
-rt = Rtsne(as.dist(stnr2), perplexity=perp,max_iter=2,is_distance=T)
+rt = Rtsne(as.dist(strd), perplexity=perp,max_iter=2,is_distance=T)
 for (i in 1:250){
-	rt = Rtsne(as.dist(stnr2), perplexity=perp,max_iter=10,Y_init=rt$Y,is_distance=T)
+	rt = Rtsne(as.dist(strd), perplexity=perp,max_iter=10,Y_init=rt$Y,is_distance=T)
 	plot(rt$Y,col=colors, pch=16,cex=0.8,main=i*10)
 }
 ordispider(rt$Y,groups=site,col="grey80",alpha=0.01)
