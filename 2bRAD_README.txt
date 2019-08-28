@@ -112,10 +112,11 @@ git clone https://github.com/fgvieira/ngsLD.git
 cd ngsLD
 
 nano Makefile
-add -I${TACC_GSL_INC}  to CC and CXX macros;
+add -I${TACC_GSL_INC}  to CC and CXX macros (CFLAGS= ...);
 and -L${TACC_GSL_LIB} to the 'LIB = ...' line.
 
 module load gsl
+export PKG_CONFIG_PATH=/opt/apps/intel18/gsl/2.2.1/lib/pkgconfig/
 make
 cp ngsLD ~/bin
 
@@ -172,9 +173,9 @@ mkdir bin
 cd ~/bin 
 # cloning github repositories
 git clone https://github.com/z0on/2bRAD_denovo.git
-git clone https://github.com/z0on/2bRAD_GATK.git
+#git clone https://github.com/z0on/2bRAD_GATK.git
 # move scripts to ~/bin from sub-directories
-mv 2bRAD_GATK/* . 
+#mv 2bRAD_GATK/* . 
 mv 2bRAD_denovo/* . 
 # remove now-empty directory
 rm -rf 2bRAD_denovo 
@@ -427,7 +428,6 @@ zcat myresult.mafs.gz | cut -f5 |sed 1d >freq
 NIND=`cat bams | wc -l`
 ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 
-bads=c("K4","O5","K211","K212","K210","K213","K219")
 
 #==========================
 # ANDSD => SFS for demographic analysis
@@ -494,12 +494,31 @@ git clone https://github.com/z0on/AFS-analysis-with-moments.git
 # - projections (2 x 0.9 x number of samples) for in each pop;
 # - mutation rate per gamete per generation
 # - generation time, in thousand years
-IN="2pops_dadi.data pop0 pop1 36 36 0.02 0.005"
 
-# after setting the $IN variable, execute all commands listed in the text file "allmodels_unfolded" (if your alleles are polarized into ancestral and derived, for example by mapping to a sister species genome) or "allmodels_folded" 
+# if your alleles are polarized into ancestral and derived, for example by mapping to a sister species genome: 
+export MODELS= ~/AFS-analysis-with-moments/multimodel_inference/allmodels_unfolded
+# else:
+export MODELS= ~/AFS-analysis-with-moments/multimodel_inference/allmodels_folded
 
-# collecting results while fixing broken lines
-grep RESULT *.mom -A 4 | grep -v Launcher | grep -E "[0-9]|\]" | perl -pe 's/\n//' | perl -pe 's/RESULT/\nRESULT/g' >mmods.res
+ARGS="2pops_dadi.data pop0 pop1 36 36 0.02 0.005"
+NREPS=10
+>am
+for i in `seq 1 $NREPS`;do 
+cat $MODELS >>am;
+done
+NMODELS=`cat am | wc -l`
+>args
+for i in `seq 1 $NMODELS`; do
+echo $ARGS >>args;
+done
+paste am args -d " " >mmods
+
+# execute all commands listed in the text file "mmods", save output in a text file "res"
+
+grep RESULT res -A 4 | grep -v Launcher | grep -E "[0-9]|\]" | perl -pe 's/\n//' | perl -pe 's/RESULT/\nRESULT/g' >mmods.res
+
+# best likelihood:
+cat mmods.res | awk 'NR == 1 || $5 > max {line = $0; max = $5}END{print line}'
 
 # extracting likelihoods and parameter numbers for AIC:
 cut -f 2,3,4,5 -d " " mmods.res >likes
