@@ -496,9 +496,9 @@ git clone https://github.com/z0on/AFS-analysis-with-moments.git
 # - generation time, in thousand years
 
 # if your alleles are polarized into ancestral and derived, for example by mapping to a sister species genome: 
-export MODELS= ~/AFS-analysis-with-moments/multimodel_inference/allmodels_unfolded
+export MODELS=$HOME/AFS-analysis-with-moments/multimodel_inference/allmodels_unfolded
 # else:
-export MODELS= ~/AFS-analysis-with-moments/multimodel_inference/allmodels_folded
+export MODELS=$HOME/AFS-analysis-with-moments/multimodel_inference/allmodels_folded
 
 ARGS="2pops_dadi.data pop0 pop1 36 36 0.02 0.005"
 NREPS=10
