@@ -470,6 +470,7 @@ realsfs2dadi.pl dadiout 20 20 >2pops_dadi.data
 #===================== 2d AFS analysis using Moments
 
 # get Misha's Moments scripts collection
+cd ~
 git clone https://github.com/z0on/AFS-analysis-with-moments.git
 # set your $PATH to include the AFS-analysis-with-moments directory
 
@@ -496,9 +497,9 @@ git clone https://github.com/z0on/AFS-analysis-with-moments.git
 # - generation time, in thousand years
 
 # if your alleles are polarized into ancestral and derived, for example by mapping to a sister species genome: 
-export MODELS=$HOME/AFS-analysis-with-moments/multimodel_inference/allmodels_unfolded
+export MODELS=~/AFS-analysis-with-moments/multimodel_inference/allmodels_unfolded
 # else:
-export MODELS=$HOME/AFS-analysis-with-moments/multimodel_inference/allmodels_folded
+export MODELS=~/AFS-analysis-with-moments/multimodel_inference/allmodels_folded
 
 ARGS="2pops_dadi.data pop0 pop1 36 36 0.02 0.005"
 NREPS=10
