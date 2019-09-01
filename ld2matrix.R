@@ -1,5 +1,4 @@
 fin = commandArgs(T)
-fin="LD_1.LD.slim"
 message("reading input...")
 ald=read.table(fin,sep="\t",stringsAsFactors=FALSE) #[,c(1,2,7)]
 message("...done")
@@ -12,7 +11,6 @@ message("analyzing sites...")
 for (i in 1:nsites) {
 	message(paste(i,":",sites[i]))
 	sub=subset(ald,s1==sites[i] | s2==sites[i])
-	nrow(sub)
 	swi=which(sub$s2==sites[i])
 	sub$s2[swi]=sub$s1[swi]
 	row.names(sub)=sub$s2
