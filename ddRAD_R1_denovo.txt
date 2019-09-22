@@ -1,10 +1,33 @@
-# search-replace here:
-#    matz@utexas.edu  --> your email
-#    tagmap --> your allocation project name
 
----- INSTALLATIONS -----
+#=============================================
+               INSTALLATIONS
+#=============================================
 
-------- ANGSD (good luck with this one): 
+------- cutadapt: 
+
+cd
+pip install --user cutadapt
+cp .local/bin/cutadapt ~/bin
+
+------- jellyfish: 
+
+wget https://github.com/gmarcais/Jellyfish/releases/download/v2.3.0/jellyfish-2.3.0.tar.gz
+tar vxf jellyfish-2.3.0.tar.gz
+cd jellyfish-2.3.0/
+./configure --prefix=$HOME
+make
+make install
+
+
+-------- Misha's 2bRAD scripts
+
+cd ~/bin
+git clone https://github.com/z0on/2bRAD_denovo.git
+chmod +x 2bRAD_denovo/*.PL
+mv 2bRAD_denovo/* .
+rm -rf 2bRAD_denovo
+
+#------- ANGSD (note: version numbers might be outdated, replace with latest): 
 
 # install xz first from https://tukaani.org/xz/
 cd
@@ -37,7 +60,6 @@ make HTSSRC=../htslib
 # now adding ANGSD to $PATH
 cd
 nano .bashrc
-# section 2:
    export PATH=$HOME/angsd:$PATH
    export PATH=$HOME/angsd/misc:$PATH
 # save (Ctl-O, Ctl-X)
@@ -57,72 +79,53 @@ wget popgen.dk/software/download/NGSadmix/ngsadmix32.cpp
 g++ ngsadmix32.cpp -O3 -lpthread -lz -o NGSadmix
 cd -
 
--------- Misha's 2bRAD scripts
-
-cd ~/bin
-git clone https://github.com/z0on/2bRAD_denovo.git
-chmod +x 2bRAD_denovo/*.pl
-mv 2bRAD_denovo/* .
-rm -rf 2bRAD_denovo
-
-
-
 # assuming $HOME/bin is in your $PATH already; if not, add it (edit .bashrc and re-login)
 
-#----------------------  ddRAD R1 read processing
 
-# moving R2 reads away
+#=============================================
+       ddRAD R1 read processing
+#=============================================
+
+# moving R2 reads away; not going to use them
 mkdir R2
 mv *_R2* R2
 
 # look at reads
 head -50 myfile.fastq | grep -E "^[ATGCN]+$"
 
-ANCCACATGCCACAAACAGAGTCGACTGAGGTATGCAAAACCACATTTGGCCAAGCCAGTTTCATNTTGGAAGAAGGTCCTGTGGACTGATGAAACCAAGATTGAGTTGTTTGGTCACACAAAAAGGCGTTATGCATGGCGCCACAAAGA
-CNATCCATGCATTAGCGCTGCCTTTTCCACGCCCGAGGTCTGAATCGTCAGAGCAGCTGCTATGTNACAGGGTCCCAAAGACCACTGAGATCGTTATACAGATCGCTACGGGTTGCCGTATCGTTGCTGCATTATTGGGAAGATCTGACT
-TNGATCATGCCTAGGAGTTGTAGGGAGGTCATACAGGCACGTGGAGGCCACACACAATACTGAGCNTCATTTTGACTTGTTTTAAGGACATTCCATCCCACTTTAATTCCAATCCATATGTGAAGGGATGGGTGAGCTTTTATTTTAATG
-TNCATCATGCAGGTAGCTATTTACTGCCGTCCCTTTACGATGGACTGTTGTTTGTAACATGTTAGNTGTGTCCCTACTCACCATCACATCCAGGAACTCAATACTCTCATGGCTATATTTATACGTGAGCTTAATATTGACCATATTCTA
-ANTTACATGCCTGCTGAGAGCAGCAGCTCATGCATGTGGCTGACCGAAAAGATTATGATGAAGGCNATCTGGTCATGGGCCCCCCCAGAGCCCGGGCCCCCGGGCACTAGCCCAGATTGCCCTCATTATAATCCGCCTATGCCCCCAGGG
-ANGGTCATGCCAAAGCGCTGACACGTCCCCGTCCCGGCGCCATTTTGCCAGCGTCTCCTCTTCTANCAAGTCCTGTCTCCCGGAGCCTGTGAGTCTGACTGCGCCTGCGCAACTCCTGTGTTTCACACGGGAGCGCGCAGGAGCCGGCAG
-ANGGTCATGCAGGAATACAGGAAAATGCTGAATCATATGCTCTTCGATAGCATATTAATAATTAANATTCCAGGCCCACACGCAAAGTCGCTCTTAAAGGGCCAGGCATTTTTTAAAAATTAGGGCGGCACCAATAACACATGAAGACAA
-GNATGCATGCCAGATGTTGCAAACGGCCTTTTTGGGGTTGTCGGAACATTCCTTAAAAAACAACCNGACTCGGGAAGACCTCACAGATGTAGTGGCAACGTCCGTCGTGTTGGTGGTCCGGGTAACGGTTGCCTGCCTTGTGTGTGCGGT
-TNGATCATGCTGAAGTCAGTTACCGGCTACAGAAGAGCACGCTGCATGGTGTGGGAGTGGGACAGNTGAGTAAAATAGTTTTGTTTTGTTTTTTAAATTCCAAGGTCAGGTTGCTTAAGGTAAAATGAGTTATACAGCGAATGGTCAAGA
-CNACCCATGCCCCTGTTCGGCAGCATCATGCGTCCCCTGTGAATGTGCTATTGAGATTGTAATAGNGTGCATACAATGTTTACTGCTGCCATCTTTGGACCGTTGGTGCTCCAAAGATGGTAGCGGAATAAAACCCTGTGAACGCGCTAT
-ANCTACATGCGGAGGCACATGCAATACAAGCACCCGACTAGATGGCGGGTAGACCAAGTTGTAACNCCTGTGTCTGAGGGTCAAACCACTGCCCCTCCACCCATACTACGTTATTCCCAGTCTGCTGTACAGGAAGCAGGCGCTGTTGCC
-CNACCCATGCACCTTATCACATCTTGCAGTACCTGATCTTTCCGCAGACTGTTGGAGCTGAGTGCNACAGCCTTTCATCAAGATTTATTAAGCAGCCAAACCCGAACACTAAAAAGGACTTTCTTTTTGAAGTCCATGTTCGGGGCTCCT
-GNATGCATGCTTTACTTCACTTCATCTGACGGTTGGCAACATGCTTGGAAGTGTGAGGCTTGCACNACTGCTGCTATGCAATGGAAACACATCACACGGTTTGTGGGCTAATGTTCATTCCAGAGGAGGTGTGAAACTCAAACGGTATTT
-
-# de-multiplexing, leaving tag 120b in length, excising the 66th base (N in many reads in this case):
+# de-multiplexing, leaving tag 120b in length:
+export TagLen=120
 >tdd
-for D in `ls *.fastq`;do echo "trim_ddRAD.pl fastq=$D excise=66-66 minBCcount=80000 length=120 tagsPerRead=1 sampleID=2">>tdd;done
-launcher_creator.py -j tdd -n tdd -a tagmap -t 1:00:00 -e matz@utexas.edu -q normal
-sbatch tdd.slurm
+for D in `ls *.fastq`;do echo "trim_ddRAD.pl fastq=$D minBCcount=80000 length=$TagLen tagsPerRead=1 sampleID=2">>tdd;done
+# execute all commands in tdd
 
-# quality filtering using fastx_toolkit
-module load fastx_toolkit
-ls *.tr0 | perl -pe 's/^(\S+)\.tr0$/cat $1\.tr0 \| fastq_quality_filter -q 20 -p 90 >$1\.trim/' >filt0
-launcher_creator.py -j filt0 -n filt0 -t 0:15:00 -a mega2014 -e matz@utexas.edu -q normal
-sbatch filt0.slurm
+# quality filtering using cutadapt (see installation above)
+# removing reads with qualities at ends less than Q15
+export TagLen=120
+>trimse
+for file in *.tr0; do
+echo "cutadapt --format fastq -q 15,15 -m $TagLen -o ${file/.tr0/}.trim $file > ${file}_trimlog.txt" >> trimse;
+done
+# execute all commands in trimse
 
-#------------------ "STACKING"
+#------------------ "stacking"  (essentially, kmer analysis with kmer length = read length)
 
 # converting fastq to fasta (for kmer analysis)
+>f2f
 for F in `ls *trim`; do echo "fastq_to_fasta -i $F -o $F.fasta" >>f2f ;done
-launcher_creator.py -j f2f -n f2f -t 0:30:00 -a tagmap -e matz@utexas.edu 
-sbatch f2f.slurm
+# execute all commands in f2f
 
-# analyzing kmers (120-mers) 
+# analyzing kmers
+ 
+export TagLen=120
 module load jellyfish
-rm jelly
-for F in `ls *fasta`; do echo "jellyfish count -m 120 -s 100M -t 1 -C $F -o $F.jf; jellyfish dump $F.jf > $F.kmers.fa">>jelly;done
-launcher_creator.py -j jelly -n jelly -t 0:30:00 -a tagmap -e matz@utexas.edu -w 12 -q normal
-sbatch jelly.slurm
+>jelly
+for F in `ls *fasta`; do echo "jellyfish count -m $TagLen -s 100M -t 1 -C $F -o $F.jf && jellyfish dump $F.jf > $F.kmers.fa">>jelly;done
+# execute all commands in jelly
 
 # merging kmers, minDP=6 , minInd=3, maxInd=[all individuals]
 ls *kmers.fa > all.kf
-echo "mergeKmers.pl all.kf minDP=6 minInd=3 > all.ktab"> mk
-launcher_creator.py -j mk -n mk -t 0:30:00 -a tagmap -e matz@utexas.edu 
-sbatch mk.slurm
+mergeKmers.pl all.kf minDP=6 minInd=3 > all.ktab
 
 # in the mk.o* file, should see report something like this:
 # considering kmers seen at least 6 times:8663509 kmers
@@ -134,55 +137,42 @@ sbatch mk.slurm
 awk '{print ">"$1"\n"$2}' all.ktab | tail -n +3 > all.fasta
 
 # clustering kmers into loci using cd-hit
-# clustering allowing for up to 3% mismatch (-c 0.97); the most abundant sequence becomes reference
-echo "cd-hit-est -i all.ktab.fasta -o all.clust -aL 1 -aS 1 -g 1 -c 0.97 -M 0 -T 0" >>cdhi;done 
-launcher_creator.py -j cdhi -n cdhi -t 0:30:00 -a tagmap -e matz@utexas.edu
-sbatch cdhi.slurm
+# allowing for up to 3% mismatch (-c 0.97); the most abundant sequence becomes "reference"
+cd-hit-est -i all.ktab.fasta -o all.clust -aL 1 -aS 1 -g 1 -c 0.97 -M 0 -T 0
 
 # number of clusters:
 grep ">"  all.ktab.fasta.clust | wc -l
 
 # adding loci designations to kmer table:
 >k2l
-echo "ktable2loci.pl all.ktab all.ktab.fasta.clust.clstr all.ktab.fasta.clust > all.ltab">>k2l
-launcher_creator.py -j k2l -n k2l -t 0:30:00 -a tagmap -e matz@utexas.edu
-sbatch k2l.slurm
+ktable2loci.pl all.ktab all.ktab.fasta.clust.clstr all.ktab.fasta.clust > all.ltab
 
-#------------------------- making "genome" (30 fake chromosomes made of concatenated "loci")
-
-module load perl
-module load bowtie
-module load samtools
-module load picard-tools
-
-idev
+#------------------------- making "genome" (20 fake chromosomes made of concatenated "loci")
 
 F='all.ktab.fasta.clust'
-concatFasta.pl fasta=$F num=30 && GENOME_FASTA=`ls $F | perl -pe 's/(\S)\.ktab.+/$1_cc.fasta/'` && GENOME_DICT=`ls $F | perl -pe 's/(\S)\.ktab.+/$1_cc.dict/'` && samtools faidx $GENOME_FASTA && java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT && bowtie2-build $GENOME_FASTA $GENOME_FASTA
-
-exit
+concatFasta.pl fasta=$F num=20 && GENOME_FASTA=`ls $F | perl -pe 's/(\S)\.ktab.+/$1_cc.fasta/'` && GENOME_DICT=`ls $F | perl -pe 's/(\S)\.ktab.+/$1_cc.dict/'` && samtools faidx $GENOME_FASTA && java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT && bowtie2-build $GENOME_FASTA $GENOME_FASTA
 
 #------------------------- mapping trimmed-filtered reads to "genome"
 
-rm maps
+>maps
 for F in `ls *.trim`; do
 REF=all_cc.fasta
 echo "bowtie2 --no-unal -x $REF -U $F -S $F.sam">>maps
 done
-launcher_creator.py -j maps -n maps -t 2:00:00 -a tagmap -e matz@utexas.edu
-sbatch maps.slurm
+# execute all commands in maps
 
 #------------------------- converting sams to bams, indexing
 
+module load samtools
 >s2b
+for file in *.sam; do
+echo "samtools sort -O bam -o ${file/.sam/}.bam $file && samtools index ${file/.sam/}.bam">>s2b;
+done
 
-ls *.sam | perl -pe 's/(\S+)\.sam/samtools import all_cc\.fasta $1\.sam $1\.unsorted\.bam && samtools sort -o $1\.sorted\.bam $1\.unsorted\.bam && java -Xmx5g -jar \$TACC_PICARD_DIR\/picard\.jar AddOrReplaceReadGroups INPUT=$1\.sorted\.bam OUTPUT=$1\.bam RGID=group1 RGLB=lib1 RGPL=illumina RGPU=unit1 RGSM=$1 && samtools index $1\.bam/' >>s2b
-launcher_creator.py -j s2b -n s2b -t 1:00:00 -q normal -w 12 -a mega2014 -e matz@utexas.edu
-sbatch s2b.slurm
+# execute all commands listed in s2b file
+ls *bam | wc -l  # should be the same number as number of trim files
 
-rm *sorted*
-
-#------------------------- quality assessment, ANGSD (using only chr1 = 1/10th of total)
+#------------------------- quality assessment, ANGSD (using only chr1 = 1/20th of total)
 
 ls *bam > bams
 
@@ -247,15 +237,6 @@ for K in `seq 2 5` ;
 do 
 NGSadmix -likes myresult.beagle.gz -K $K -P 10 -o mydata_k${K};
 done
-
-# alternatively, to use real ADMIXTURE on called SNPs:
-gunzip myresult.vcf.gz
-plink --vcf myresult.vcf --make-bed --out myresult
-for K in `seq 1 5`; \
-do admixture --cv myresult.bed $K | tee myresult_${K}.out; done
-
-# which K is least CV error?
-grep -h CV myresult_*.out
 
 # scp the *.Q and inds2pops files to laptop, plot it in R:
 # use admixturePlotting2a.R to plot (will require minor editing - population names)

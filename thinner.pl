@@ -1,21 +1,35 @@
 #!/usr/bin/perl
 
 my $usage="
-thinner.pl (v.4.3) : 
+thinner.pl (v.4.4) : 
+
+Subsamples a tab-delimited genotype file (vcf, beagle, etc) where first column is 
+chromosome (contig) and second column is position within it.
 
 Leaves only one SNP per specified nucleotide distance interval, chosen by its 
-allele frequency, sequencing depth, combination of those, or randomly.
+allele frequency, sequencing depth, combination of those, or randomly. All criteria
+except random assume the input is a VCF with AF and DP info.
 
-The minimal distance between selected SNPs is half the specified interval.
+The process works like this:
+1. Start position is randomly chosen within \"interval\" distance from the beginning 
+of the chromosome.
+2. SNP is chosen within the \"interval\" from the start position.
+3. New start is set \"interval\" away from the chosen SNP.
+4. Repeat 2-3 until end of chromosome, then go to 1 with new chromosome. 
 
-The thinning process uses random starts for interval specification, potentially
-resulting in different SNPs selected. 
+The minimal distance between selected SNPs is \"interval\", but most selected SNPs will 
+be further apart than that.
+
+Since the process uses random starts at each chromosome, different SNPs might be selected
+even with deterministic (AF- or DP-based) criteria. Random thinning is particularly 
+useful for \"LD network\" analysis.
 
 Arguments:
 
-               vcf=[file name] : vcf file name
+               infile=[file name] : input file name; can be any tab-delimited 
+                                    file 
             
-            interval=[integer] : interval length, default 40 (for 2bRAD tags)
+               interval=[integer] : interval length, default 40 (for 2bRAD tags)
             
 criterion=[maxAF|maxDP-random|maxDP-maxAF|random] : SNP choosing criterion.
                              maxAF - maximum minor allele frequency;
@@ -25,9 +39,9 @@ criterion=[maxAF|maxDP-random|maxDP-maxAF|random] : SNP choosing criterion.
                                      maximum sequencing depth (default);
                             random - random selection.
 
-Output:  thinned VCF, printed to STDOUT
+Output:  thinned table, printed to STDOUT
 
-Example: thinner.pl vcf=denovo.recal.vcf > thinDenov.vcf
+Example: thinner.pl infile=denovo.vcf > thinDenov.vcf
 
 NOTES: - Do not thin variants if you want to calculate pi or Tajima's D.
 
@@ -36,7 +50,7 @@ Mikhail Matz, matz\@utexas.edu
 ";
 
 my $vcf;
-if (" @ARGV "=~/vcf=(\S+)/) { $vcf=$1; } else { die $usage; }
+if (" @ARGV "=~/infile=(\S+)/) { $vcf=$1; } else { die $usage; }
 my $inter=80;
 if (" @ARGV "=~/interval=(\d+)/) { $inter=$1*2; } 
 my $criterion="maxDP-maxAF";
@@ -46,7 +60,7 @@ elsif (" @ARGV "=~/criterion=maxDP-random/) { $criterion="maxDP-random"; }
 
 #warn "criterion:$criterion\n";
 
-open VCF, $vcf or die "cannot open vcf file $vcf\n";
+open VCF, $vcf or die "cannot open input file $vcf\n";
 
 my @dats;
 my $info;
