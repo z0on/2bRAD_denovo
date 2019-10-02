@@ -118,18 +118,21 @@ for F in `ls *trim`; do echo "fastq_to_fasta -i $F -o $F.fasta" >>f2f ;done
 # analyzing kmers
  
 export TagLen=120
-module load jellyfish
 >jelly
 for F in `ls *fasta`; do echo "jellyfish count -m $TagLen -s 100M -t 1 -C $F -o $F.jf && jellyfish dump $F.jf > $F.kmers.fa">>jelly;done
 # execute all commands in jelly
 
-# merging kmers, minDP=6 , minInd=3, maxInd=[all individuals]
+# merging kmer lists and filtering kmers aiming to get major alleles
+# settings: 
+# minimal total number of kmer occurences (minDP)=10, 
+# minimum number of individuals with this kmer (minInd)=10, 
+# maximum number of individuals with this kmer (maxInd)=[all individuals]
 ls *kmers.fa > all.kf
-mergeKmers.pl all.kf minDP=6 minInd=3 > all.ktab
+mergeKmers.pl all.kf minDP=10 minInd=10 > all.ktab
 
 # in the mk.o* file, should see report something like this:
-# considering kmers seen at least 6 times:8663509 kmers
-# passing minDP:6 minInd:3 maxInd:-1 filters: 562020
+# considering kmers seen at least 10 times:8663509 kmers
+# passing minDP:10 minInd:10 maxInd:-1 filters: 562020
 
 #------------------ clustering kmers into "loci"
 
@@ -137,20 +140,19 @@ mergeKmers.pl all.kf minDP=6 minInd=3 > all.ktab
 awk '{print ">"$1"\n"$2}' all.ktab | tail -n +3 > all.fasta
 
 # clustering kmers into loci using cd-hit
-# allowing for up to 3% mismatch (-c 0.97); the most abundant sequence becomes "reference"
+# allowing for up to 3% mismatch (-c 0.97); the most abundant sequence becomes "reference" (major allele at a locus)
 cd-hit-est -i all.ktab.fasta -o all.clust -aL 1 -aS 1 -g 1 -c 0.97 -M 0 -T 0
 
 # number of clusters:
 grep ">"  all.ktab.fasta.clust | wc -l
 
-# adding loci designations to kmer table:
->k2l
-ktable2loci.pl all.ktab all.ktab.fasta.clust.clstr all.ktab.fasta.clust > all.ltab
+#------------------------- making and formatting "genome" (20 fake chromosomes made of concatenated "loci")
 
-#------------------------- making "genome" (20 fake chromosomes made of concatenated "loci")
-
-F='all.ktab.fasta.clust'
-concatFasta.pl fasta=$F num=20 && GENOME_FASTA=`ls $F | perl -pe 's/(\S)\.ktab.+/$1_cc.fasta/'` && GENOME_DICT=`ls $F | perl -pe 's/(\S)\.ktab.+/$1_cc.dict/'` && samtools faidx $GENOME_FASTA && java -jar $TACC_PICARD_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT && bowtie2-build $GENOME_FASTA $GENOME_FASTA
+concatFasta.pl fasta=all.ktab.fasta.clust num=20
+mv all.ktab.fasta.clust_cc.fasta all_cc.fasta
+mv all.ktab.fasta.clust_cc.tab all_cc.tab
+samtools faidx all_cc.fasta
+bowtie2-build all_cc.fasta all_cc.fasta
 
 #------------------------- mapping trimmed-filtered reads to "genome"
 
@@ -163,7 +165,6 @@ done
 
 #------------------------- converting sams to bams, indexing
 
-module load samtools
 >s2b
 for file in *.sam; do
 echo "samtools sort -O bam -o ${file/.sam/}.bam $file && samtools index ${file/.sam/}.bam">>s2b;
@@ -199,7 +200,7 @@ cat dd.info
 
 #--------------- population structure
 
-# Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); manually remove them from bams list. If you want to detect clones, however, do keep the replicates and analyse identity-by-state (IBS) matrix (explained below)
+# Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); remove them from bams list. If you want to detect clones, however, do keep the replicates and analyse identity-by-state (IBS) matrix (explained below)
 
 # Generating genotype likelihoods from highly confident (non-sequencing-error) SNPs
 
