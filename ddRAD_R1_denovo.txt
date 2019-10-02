@@ -18,6 +18,11 @@ cd jellyfish-2.3.0/
 make
 make install
 
+------- cd-hit:
+
+git clone https://github.com/weizhongli/cdhit.git
+cd cd-hit
+make
 
 -------- Misha's 2bRAD scripts
 
