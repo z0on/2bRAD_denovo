@@ -256,12 +256,12 @@ done
 # now not filtering for allele frequency
 # sb - strand bias filter; only use for 2bRAD, GBS or WGS (not for ddRAD or RADseq)
 # hetbias - detects weird heterozygotes because they have unequal representation of alleles 
-# setting minInd to 80% of all  individuals (might depend on the results from quality control step)
-MI=`cat bams | wc -l | awk '{print int($1*0.8)}'`
+# setting minInd to 50% of all  individuals (might depend on the results from quality control step)
+MI=`cat bams | wc -l | awk '{print int($1*0.5)}'`
 GENOME_REF=all_cc.fasta
 FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -hetbias_pval 1e-5 -minInd $MI"
 TODO="-doHWE 1 -doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doSaf 1 -anc $GENOME_REF -fold 1"
-angsd -b bams -GL 1 -P 6 $FILTERS $TODO -out div
+angsd -b bams -GL 1 -P 12 $FILTERS $TODO -out div
 
 # generating SFS
 realSFS div.saf.idx -P 6 > div.sfs
@@ -273,6 +273,13 @@ a=scan(args[1])
 print(round(a[2]/sum(a),5))' >het.R
 Rscript het.R div.sfs
 
+#-------------- estimate theta 
 
+GENOME_REF=all_cc.fasta
+FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -hetbias_pval 1e-5 -minInd $MI"
+angsd -bam bams -out div2 -doThetas 1 -doSaf 1 -pest div.sfs -anc $GENOME_REF -GL 1
+
+# log-scale per-site thetas:
+thetaStat print div2.thetas.idx 2>/dev/null > logThetas
 
 
