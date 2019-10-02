@@ -134,7 +134,7 @@ mergeKmers.pl all.kf minDP=10 minInd=10 > all.ktab
 # considering kmers seen at least 10 times:8663509 kmers
 # passing minDP:10 minInd:10 maxInd:-1 filters: 562020
 
-#------------------ clustering kmers into "loci"
+#------------------ clustering kmers to identify major alleles (for "fake genome" assembly)
 
 # converting kmers to fasta
 awk '{print ">"$1"\n"$2}' all.ktab | tail -n +3 > all.fasta
@@ -143,7 +143,7 @@ awk '{print ">"$1"\n"$2}' all.ktab | tail -n +3 > all.fasta
 # allowing for up to 3% mismatch (-c 0.97); the most abundant sequence becomes "reference" (major allele at a locus)
 cd-hit-est -i all.ktab.fasta -o all.clust -aL 1 -aS 1 -g 1 -c 0.97 -M 0 -T 0
 
-# number of clusters:
+# number of inferred RAD loci:
 grep ">"  all.ktab.fasta.clust | wc -l
 
 #------------------------- making and formatting "genome" (20 fake chromosomes made of concatenated "loci")
@@ -156,9 +156,9 @@ bowtie2-build all_cc.fasta all_cc.fasta
 
 #------------------------- mapping trimmed-filtered reads to "genome"
 
+REF=all_cc.fasta
 >maps
 for F in `ls *.trim`; do
-REF=all_cc.fasta
 echo "bowtie2 --no-unal -x $REF -U $F -S $F.sam">>maps
 done
 # execute all commands in maps
@@ -246,7 +246,7 @@ done
 # scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
 
 #==========================
-# ANDSD => heterozygosity 
+# ANDSD => SFS and heterozygosity 
 
 # now not filtering for allele frequency
 # sb - strand bias filter; only use for 2bRAD, GBS or WGS (not for ddRAD or RADseq)
@@ -261,7 +261,8 @@ angsd -b bams -GL 1 -P 6 $FILTERS $TODO -out div
 # generating SFS
 realSFS div.saf.idx -P 6 > div.sfs
 
-# For diploid single samples the hetereozygosity is the proportion of second value in the SFS/AFS (as per http://www.popgen.dk/angsd/index.php/Heterozygosity) 
+# ANGSD website: "For diploid single samples the hetereozygosity is simply the second value in the SFS/AFS" (http://www.popgen.dk/angsd/index.php/Heterozygosity) 
+# so, let's make a little R script:
 echo 'args = commandArgs(trailingOnly=TRUE)
 a=scan(args[1])
 print(round(a[2]/sum(a),5))' >het.R
