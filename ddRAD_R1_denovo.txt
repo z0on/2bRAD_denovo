@@ -172,10 +172,9 @@ done
 
 # execute all commands listed in s2b file
 ls *bam | wc -l  # should be the same number as number of trim files
-
-#------------------------- quality assessment, ANGSD (using only chr1 = 1/20th of total)
-
 ls *bam > bams
+
+#------------------------- quality assessment (feel free to skip), ANGSD (using only chr1 = 1/20th of total)
 
 export GENOME_REF=all_cc.fasta
 
@@ -191,14 +190,14 @@ TODO="-doQsDist 1 -doDepth 1 -doCounts 1"
 
 # in the following line, -r argument is one chromosome or contig to work with (no need to do this for whole genome as long as the chosen chromosome or contig is long enough)
 # (look up lengths of your contigs in the header of *.sam files)
-angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 1 -out dd 
+angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 6 -out dd 
 
 # summarizing results (using modified script by Matteo Fumagalli)
 Rscript ~/bin/plotQC.R dd  
 cat dd.info 
 # scp dd.pdf to laptop to look at distribution of base quality scores, fraction of sites in each sample passing coverage thresholds, and fraction of sites passing genotyping rates cutoffs. Use these to guide choices of -minQ,  -minIndDepth and -minInd filters in subsequent ANGSD runs
 
-#--------------- population structure
+#--------------- population structure, HWE (common variants, maf>0.05)
 
 # Note: PCA and Admixture are not supposed to be run on data that contain clones (or genotyping replicates); remove them from bams list. If you want to detect clones, however, do keep the replicates and analyse identity-by-state (IBS) matrix (explained below)
 
@@ -209,20 +208,22 @@ cat dd.info
 # Suggested filters :
 # -minMapQ 20 : only highly unique mappings
 # -minQ 30 : only highly confident base calls
-# -minInd 50 : the site must be genotyped in at least 50 individuals (note: set this to at least 80% of your total number of your individuals if you can, he third quality assessment graph is your guide)
+# -minInd : the site must be genotyped in at least that many individuals (setting this to 80% of  total number of  individuals here)
 # -snp_pval 1e-5 : high confidence that the SNP is not just sequencing error 
 # -minMaf 0.05 : only common SNPs, with allele frequency 0.05 or more. Consider raising this to 0.1 for population structure analysis.
 # Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
 # also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation):
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 30 -minInd 50 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hetbias_pval 1e-2 -skipTriallelic 1"
+
+MI=`cat bams | wc -l | awk '{print int($1*0.8)}'`
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 20 -minInd $MI -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hetbias_pval 1e-2 -skipTriallelic 1"
 
 # THINGS FOR ANGSD TO DO : 
 # -GL 1 : samtools likelihood model
-# -doGlf 2 : output beagle format (for admixture)
+# -doGlf 2 : output genotype likelihoods in beagle format (for admixture)
 # -doPost 1 : output posterior allele frequencies based on HWE prior
 # -doMajorMinor 1 : infer major and minor alleles from data (not from reference)
-# -makeMatrix 1 -doIBS 1 -doCov 1 : identity-by-state and covariance matrices based on single-read resampling (robust to variation in coverage across samples)
-TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 2"
+# -makeMatrix 1 -doIBS 1 : identity-by-state and covariance matrices based on single-read resampling (robust to variation in coverage across samples)
+TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doGeno 32 -doVcf 1 -doPost 1 -doGlf 2"
 
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
 angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
@@ -244,4 +245,28 @@ done
 
 # scp *Mat, *covar, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
 
-#-------------
+#==========================
+# ANDSD => heterozygosity 
+
+# now not filtering for allele frequency
+# sb - strand bias filter; only use for 2bRAD, GBS or WGS (not for ddRAD or RADseq)
+# hetbias - detects weird heterozygotes because they have unequal representation of alleles 
+# setting minInd to 80% of all  individuals (might depend on the results from quality control step)
+MI=`cat bams | wc -l | awk '{print int($1*0.8)}'`
+GENOME_REF=all_cc.fasta
+FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -hetbias_pval 1e-5 -minInd $MI"
+TODO="-doHWE 1 -doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doSaf 1 -anc $GENOME_REF -fold 1"
+angsd -b bams -GL 1 -P 6 $FILTERS $TODO -out div
+
+# generating SFS
+realSFS div.saf.idx -P 6 > div.sfs
+
+# For diploid single samples the hetereozygosity is the proportion of second value in the SFS/AFS (as per http://www.popgen.dk/angsd/index.php/Heterozygosity) 
+echo 'args = commandArgs(trailingOnly=TRUE)
+a=scan(args[1])
+print(round(a[2]/sum(a),5))' >het.R
+Rscript het.R div.sfs
+
+
+
+
