@@ -219,8 +219,8 @@ cat dd.info
 # Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
 # also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation):
 
-MI=`cat bams | wc -l | awk '{print int($1*0.8)}'`
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 20 -minInd $MI -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hetbias_pval 1e-2 -skipTriallelic 1"
+MI=`cat bams | wc -l | awk '{print int($1*0.75)}'`
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 20 -baq 1 -minInd $MI -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hetbias_pval 1e-5 -skipTriallelic 1"
 
 # THINGS FOR ANGSD TO DO : 
 # -GL 1 : samtools likelihood model
