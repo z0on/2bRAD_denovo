@@ -28,6 +28,12 @@ cdh
 pip install --user cutadapt
 cp .local/bin/cutadapt ~/bin
 
+------- cd-hit:
+
+git clone https://github.com/weizhongli/cdhit.git
+cd cd-hit
+make
+
 ------- Moments: 
 
 cd

@@ -104,7 +104,7 @@ for D in `ls *.fastq`;do echo "trim_ddRAD.pl fastq=$D minBCcount=80000 length=$T
 export TagLen=120
 >trimse
 for file in *.tr0; do
-echo "cutadapt --format fastq -q 15,15 -m $TagLen -o ${file/.tr0/}.trim $file > ${file}_trimlog.txt" >> trimse;
+echo "cutadapt --format fastq -q 15,15 -m $TagLen -l $TagLen -o ${file/.tr0/}.trim $file > ${file}_trimlog.txt" >> trimse;
 done
 # execute all commands in trimse
 
@@ -112,14 +112,14 @@ done
 
 # converting fastq to fasta (for kmer analysis)
 >f2f
-for F in `ls *trim`; do echo "fastq_to_fasta -i $F -o $F.fasta" >>f2f ;done
+for F in `ls *trim`; do echo "paste - - - - < $F | cut -f 1,2 | sed 's/^@/>/' | tr \"\t\" \"\n\" > ${F/.trim/}.fasta" >>f2f ;done
 # execute all commands in f2f
 
 # analyzing kmers
  
 export TagLen=120
 >jelly
-for F in `ls *fasta`; do echo "jellyfish count -m $TagLen -s 100M -t 1 -C $F -o $F.jf && jellyfish dump $F.jf > $F.kmers.fa">>jelly;done
+for F in `ls *fasta`; do echo "jellyfish count -m $TagLen -s 100M -t 1 -C $F -o ${F/.fasta/}.jf && jellyfish dump ${F/.fasta/}.jf > ${F/.fasta/}.kmers.fa">>jelly;done
 # execute all commands in jelly
 
 # merging kmer lists and filtering kmers aiming to get major alleles
@@ -130,7 +130,7 @@ for F in `ls *fasta`; do echo "jellyfish count -m $TagLen -s 100M -t 1 -C $F -o 
 ls *kmers.fa > all.kf
 mergeKmers.pl all.kf minDP=10 minInd=10 > all.ktab
 
-# in the mk.o* file, should see report something like this:
+# should see report something like this:
 # considering kmers seen at least 10 times:8663509 kmers
 # passing minDP:10 minInd:10 maxInd:-1 filters: 562020
 
@@ -139,18 +139,20 @@ mergeKmers.pl all.kf minDP=10 minInd=10 > all.ktab
 # converting kmers to fasta
 awk '{print ">"$1"\n"$2}' all.ktab | tail -n +3 > all.fasta
 
-# clustering kmers into loci using cd-hit
-# allowing for up to 3% mismatch (-c 0.97); the most abundant sequence becomes "reference" (major allele at a locus)
-cd-hit-est -i all.ktab.fasta -o all.clust -aL 1 -aS 1 -g 1 -c 0.97 -M 0 -T 0
+AllowMism=2
+TagLen=89
+CL=`echo "scale=4 ; 1-$AllowMism/$TagLen" | bc`
+# allowing for up to CL fraction ofe mismatches; the most abundant sequence becomes "reference" (major allele at a locus)
+cd-hit-est -i all.fasta -o all.clust -aL 1 -aS 1 -g 1 -c $CL -M 0 -T 0
 
 # number of clusters:
-grep ">"  all.ktab.fasta.clust | wc -l
+grep ">"  all.clust | wc -l
 
 #------------------------- making and formatting "genome" (20 fake chromosomes made of concatenated "loci")
 
-concatFasta.pl fasta=all.ktab.fasta.clust num=20
-mv all.ktab.fasta.clust_cc.fasta all_cc.fasta
-mv all.ktab.fasta.clust_cc.tab all_cc.tab
+concatFasta.pl fasta=all.clust num=20
+mv all.clust_cc.fasta all_cc.fasta
+mv all.clust_cc.tab all_cc.tab
 samtools faidx all_cc.fasta
 bowtie2-build all_cc.fasta all_cc.fasta
 
@@ -159,7 +161,7 @@ bowtie2-build all_cc.fasta all_cc.fasta
 >maps
 for F in `ls *.trim`; do
 REF=all_cc.fasta
-echo "bowtie2 --no-unal -x $REF -U $F -S $F.sam">>maps
+echo "bowtie2 --no-unal -x $REF -U $F -S ${F/.fastq/}.sam">>maps
 done
 # execute all commands in maps
 
