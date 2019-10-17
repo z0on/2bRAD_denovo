@@ -141,8 +141,11 @@ mergeKmers.pl all.kf minDP=10 minInd=10 > all.ktab
 
 #------------------ clustering kmers to identify major alleles (for "fake genome" assembly)
 
+# shuffling kmers
+tail -n +2 all.ktab | shuf > all_shuf.ktab
+
 # converting kmers to fasta
-awk '{print ">"$1"\n"$2}' all.ktab | tail -n +3 > all.fasta
+awk '{print ">"$1"\n"$2}' all_shuf.ktab > all.fasta
 
 AllowMism=2
 TagLen=89
@@ -191,14 +194,14 @@ export GENOME_REF=all_cc.fasta
 # -baq 1 : realign around indels (not terribly relevant for 2bRAD reads mapped with --local option) 
 # -maxDepth : highest total depth (sum over all samples) to assess; set to 10x number of samples
 
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -baq 1 -ref $GENOME_REF -maxDepth 1000"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -maxDepth 1000"
 
 # T O   D O : 
-TODO="-doQsDist 1 -doDepth 1 -doCounts 1"
+TODO="-doQsDist 1 -doDepth 1 -doCounts 1 -dumpCounts 2"
 
 # in the following line, -r argument is one chromosome or contig to work with (no need to do this for whole genome as long as the chosen chromosome or contig is long enough)
 # (look up lengths of your contigs in the header of *.sam files)
-angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 6 -out dd 
+angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 12 -out dd 
 
 # summarizing results (using modified script by Matteo Fumagalli)
 Rscript ~/bin/plotQC.R dd  
@@ -222,7 +225,10 @@ cat dd.info
 # Note: the last two filters are very efficient against sequencing errors but introduce bias against true rare alleles. It is OK (and even desirable) - UNLESS we want to do AFS analysis. We will generate data for AFS analysis in the next part.
 # also adding filters against very badly non-HWE sites (such as, all calls are heterozygotes => lumped paralog situation):
 
-MI=`cat bams | wc -l | awk '{print int($1*0.75)}'`
+PercInd=0.75
+NIND=`cat bams | wc -l`
+MI=`echo "($NIND*$PercInd+0.5)/1" | bc`
+
 FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 20 -baq 1 -minInd $MI -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -hetbias_pval 1e-5 -skipTriallelic 1"
 
 # THINGS FOR ANGSD TO DO : 
@@ -256,6 +262,10 @@ done
 #==========================
 # ANDSD => SFS and heterozygosity 
 
+PercInd=0.75
+NIND=`cat bams | wc -l`
+MI=`echo "($NIND*$PercInd+0.5)/1" | bc`
+
 # now not filtering for allele frequency
 # sb - strand bias filter; only use for 2bRAD, GBS or WGS (not for ddRAD or RADseq)
 # hetbias - detects weird heterozygotes because they have unequal representation of alleles 
@@ -263,18 +273,12 @@ done
 MI=`cat bams | wc -l | awk '{print int($1*0.5)}'`
 GENOME_REF=all_cc.fasta
 FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -hetbias_pval 1e-5 -minInd $MI"
-TODO="-doHWE 1 -doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doSaf 1 -anc $GENOME_REF -fold 1"
+TODO="-doHWE 1 -doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doGeno 32 -doSaf 1 -anc $GENOME_REF -fold 1"
 angsd -b bams -GL 1 -P 12 $FILTERS $TODO -out div
 
 # generating SFS
 realSFS div.saf.idx -P 6 > div.sfs
 
-# ANGSD website: "For diploid single samples the hetereozygosity is simply the second value in the SFS/AFS" (http://www.popgen.dk/angsd/index.php/Heterozygosity) 
-# so, let's make a little R script:
-echo 'args = commandArgs(trailingOnly=TRUE)
-a=scan(args[1])
-print(round(a[2]/sum(a),5))' >het.R
-Rscript het.R div.sfs
 
 #-------------- estimate theta 
 

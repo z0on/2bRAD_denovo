@@ -51,7 +51,12 @@ bams=read.table(bamlist)[,1]
 c5=1-cumul[5,]
 names(c5)=bams
 print("proportion of sites better than coverage of 5 for each sample:")
+logq=log(c5)
+zq=(logq-mean(logq))/sd(logq)
+goods=data.frame(cbind(names(zq[zq>(-2)])))
 print(data.frame(cbind(sort(c5))))
+write.table(data.frame(cbind(sort(c5))),file="quality.txt",quote=F,col.names=F)
+write.table(goods,file="bams.qc",quote=F,row.names=F,col.names=F)
 
 # plot number of sites left after certain genotying rate (-minInd) cutoff
 cname=paste(fin,".counts", sep="")

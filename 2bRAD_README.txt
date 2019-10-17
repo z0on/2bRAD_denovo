@@ -111,6 +111,21 @@ make HTSSRC=../htslib
 cp ngs* ~/bin/
 cd
 
+------- ngsF  : (inbreeding coefficients)
+
+git clone https://github.com/fgvieira/ngsF.git
+module load gsl
+cd ngsF
+
+nano Makefile
+add -I${TACC_GSL_INC}  to CC and CXX macros (CFLAGS= ...);
+and -L${TACC_GSL_LIB} to the 'LIB = ...' line.
+
+export PKG_CONFIG_PATH=/opt/apps/intel18/gsl/2.2.1/lib/pkgconfig/
+make HTSSRC=../htslib
+
+cp ngsF ~/bin
+
 ------ ngsLD :
 
 cd 
