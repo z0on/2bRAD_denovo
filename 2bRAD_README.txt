@@ -449,6 +449,9 @@ zcat myresult.mafs.gz | cut -f5 |sed 1d >freq
 NIND=`cat bams | wc -l`
 ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 
+# individual heterozygosities (proportion of heterozygotes across SNPs that pass filters)
+Rscript heterozygosity_beagle.R myresult.beagle.gz
+# this script (by Nathaniel Pope) outputs an R data bundle containing AFS (rows) for each individual (columns). The proportion of heterozygotes is the second row.
 
 #==========================
 # ANDSD => SFS for demographic analysis
