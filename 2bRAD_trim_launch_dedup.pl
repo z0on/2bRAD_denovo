@@ -23,8 +23,8 @@ sampleID=[integer] the position of name-deriving string in the file name
 					for input file Sample_RNA_2DVH_L002_R1.cat.fastq
 					specifying arg2 as \'3\' would create output 
 					file with a name \'2DVH.trim'	
-barcode2=[integer] length of the in-line barcode immediately following 
-			   the restriction fragment. Default 0. 
+barcode2=[pattern]  in-line barcode immediately following 
+			   the restriction fragment. Default \'[ATGC]{4}\'. 
 			   
 Example:
 2bRAD_trim_launch_dedup.pl fastq sampleID=3 > trims
@@ -38,6 +38,8 @@ my $sampleid=100;
 if("@ARGV"=~/sampleID=(\d)/){ $sampleid=$1;}
 my $adaptor="AGATC?";
 if("@ARGV"=~/adaptor=(\S+)/){ $adaptor=$1;}
+my $bcod="[ATGC]{4}";
+if ("@ARGV"=~/barcode2=(\S+)/){ $bcod=$1;}
 
 
 opendir THIS, ".";
@@ -51,5 +53,5 @@ foreach $fqf (@fqs) {
 		$outname=$parts[$sampleid-1].".tr0";
 	}
 	else { $outname=$fqf.".tr0";}
-	print "trim2bRAD_2barcodes_dedup.pl input=$fqf site=\"$site\" adaptor=\"$adaptor\" sampleID=$sampleid deduplicate=1\n";
+	print "trim2bRAD_2barcodes_dedup.pl input=$fqf site=\"$site\" adaptor=\"$adaptor\" sampleID=$sampleid deduplicate=1 bc=$bcod\n";
 }
