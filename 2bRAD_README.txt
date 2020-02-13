@@ -241,6 +241,7 @@ bowtie2-build $GENOME_FASTA $GENOME_FASTA
 
 samtools faidx $GENOME_FASTA
 
+# skip this unless you plan to use GATK (hard-call genotyping, with >10x coverage)
 export GENOME_DICT=$WORK/db/mygenome.dict 
 java -jar $TACC_PICARD_T_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  O=$GENOME_DICT
 
