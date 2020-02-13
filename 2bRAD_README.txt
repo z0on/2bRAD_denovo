@@ -330,15 +330,13 @@ java -jar $WHERE_PICARD_IS/picard.jar CreateSequenceDictionary R=$GENOME_FASTA  
 #==============
 # Mapping reads to reference (reads-derived fake one, or real) and formatting bam files 
 
-# for denovo: map reads to fake genome with bowtie2: 
+# for denovo: map reads to fake genome: 
 GENOME_FASTA=cdh_alltags_cc.fasta
->maps
-for F in `ls *.trim`; do
-echo "bowtie2 --no-unal -x $GENOME_FASTA -U $F -S $F.sam">>maps
-done
 
-# for reference-based: mapping with --local option, enables clipping of mismatching ends (guards against deletions near ends of RAD tags)
+# for reference-based: 
 GENOME_FASTA=mygenome.fasta
+
+# mapping with --local option, enables clipping of mismatching ends (guards against deletions near ends of RAD tags)
 2bRAD_bowtie2_launch.pl '\.trim$' $GENOME_FASTA > maps
 
 # execute all commands written to maps...
