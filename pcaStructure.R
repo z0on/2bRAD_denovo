@@ -10,6 +10,12 @@ eigs=pp0$CA$eig
 goodeigs=which(eigs<quantile(eigs,0.95) & eigs>quantile(eigs,0.05))
 
 pp1=capscale(ma[goodeigs,goodeigs]~1)
-# plot(pp1$CA$eig) 
-# lines(bstick(pp1),col="red")
-print(round(pp1$CA$eig[1]/bstick(pp1)[1],2))
+pdf(file=paste(inf,"_pcoa_eigens.pdf",sep=""),height=4.8,width=8)
+par(mfrow=c(1,2))
+plot(pp1)
+eigsn=pp1$CA$eig/sum(pp1$CA$eig)
+plot(eigsn)
+lines(bstick(nrow(ma)-1),col="red")
+dev.off()
+print(round(eigsn[1]/bstick(nrow(ma)-1)[1],2))
+
