@@ -51,7 +51,7 @@ bams=read.table(bamlist)[,1]
 c5=1-cumul[5,]
 names(c5)=bams
 print("proportion of sites better than coverage of 5 for each sample:")
-logq=log(c5)
+logq=log(c5+1e-5)
 zq=(logq-mean(logq))/sd(logq)
 goods=data.frame(cbind(names(zq[zq>(-3)])))
 print(data.frame(cbind(sort(c5))))
