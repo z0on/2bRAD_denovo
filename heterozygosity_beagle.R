@@ -33,6 +33,6 @@ for(sample in 1:dim(glf)[2])
   }
   if (iter == maxiter) warning("increase maximum number of iterations")
 }
-print(c(fin,round(summary(SFS[2,1:300]),3)),quote=F)
+print(c(fin,round(summary(SFS[2,]),3)),quote=F)
 save(SFS,file=paste(fin,"_zygosity.RData",sep="")) # SFS[2,] is estimated heterozygosity per individual
 
