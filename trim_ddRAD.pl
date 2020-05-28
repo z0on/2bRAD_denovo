@@ -5,7 +5,7 @@ Trims ddRAD R1 fastq files for analysis using Agnostic Protocol
 
             fastq=[file name] : fastq filename
     site=[perl-style pattern] : pattern defining the site, default \'CATGC\' for SphI
- barcode=[perl-style pattern] : in-read barcode that immediately preceding the restriction site, 
+ barcode=[perl-style pattern] : in-read barcode that immediately precedes the restriction site, 
                                  default \'[ATGCN]{5}\'
         tagsPerRead=[integer] : number of consecutive tags to split the read into; 
                                  default 1

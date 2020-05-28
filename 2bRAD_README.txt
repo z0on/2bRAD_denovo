@@ -124,8 +124,6 @@ and -L${TACC_GSL_LIB} to the 'LIB = ...' line.
 export PKG_CONFIG_PATH=/opt/apps/intel18/gsl/2.2.1/lib/pkgconfig/
 make HTSSRC=../htslib
 
-cp ngsF ~/bin
-
 ------ ngsLD :
 
 cd 

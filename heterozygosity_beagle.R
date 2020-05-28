@@ -27,12 +27,13 @@ for(sample in 1:dim(glf)[2])
   for (iter in 1:maxiter)
   {
     upd <- EMstep (SFS[,sample], glf[,sample,])
-    if (sqrt(sum((upd - SFS[,sample])^2)) < tol)
+     if (sqrt(sum((upd - SFS[,sample])^2)) < tol)
       break;
     SFS[,sample] <- upd
   }
+  message(sample," ",round(SFS[2,sample],4))
   if (iter == maxiter) warning("increase maximum number of iterations")
 }
-print(c(fin,round(summary(SFS[2,]),3)),quote=F)
+#print(c(fin,round(summary(SFS[2,]),3)),quote=F)
 save(SFS,file=paste(fin,"_zygosity.RData",sep="")) # SFS[2,] is estimated heterozygosity per individual
 
