@@ -35,7 +35,7 @@ plotAdmixture=function(data,npops,colors=NA,ord=NULL,angle=0,space=0,grouping.me
 	} else {
 		tsort=tbl[ord,]
 	}
-	midpts=barplot(t(as.matrix(tsort[1:npops])), col=colors,xlab="population", space=space,ylab="Ancestry", border=NA, xaxt="n",mgp=c(2,1,0))
+	midpts=barplot(t(as.matrix(tsort[1:npops])), col=colors,xlab="", space=space,ylab="Ancestry", border=NA, xaxt="n",mgp=c(2,1,0))
 	pops=unique(as.character(tsort$pop))
 	np=0;lp=0;lpoints=c()
 	abline(v=0)
@@ -49,7 +49,7 @@ plotAdmixture=function(data,npops,colors=NA,ord=NULL,angle=0,space=0,grouping.me
 		lpoints=append(lpoints,lp)
 		abline(v=np)
 	}
-	text(as.numeric(lpoints)+3.5+hshift,par("usr")[3]-vshift,labels=pops,xpd=TRUE, srt=angle, pos=2,...)
+	text(as.numeric(lpoints)+3.5+hshift,par("usr")[3]-0.1-vshift,labels=pops,xpd=TRUE, srt=angle, pos=2,...)
 	row.names(tsort)=tsort$ind
 #	return(tsort)
 	return(row.names(tsort))

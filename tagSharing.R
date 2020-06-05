@@ -8,7 +8,9 @@ Arguments:
 
 infile=[filename]   Name of tab-delimited kmers table produced my mergeKmers.pl
                     rows - kmers, columns - individuals,
-                    first 3 colums will be ignored (kmer id, sequence, and total count), 
+                    
+colskip=3           Number of first columns to ignore. Set to 4 if analyzing table
+                    produced by mergeUniq.pl, leave at 3 if using output of mergeKmers.pl 
 
 nreps=3             number of replicates (random resamplings when computing similarity)
 
@@ -36,11 +38,13 @@ infile=sub("infile=","", commandArgs()[infile])
 rr=grep("nreps=",commandArgs())
 fst=grep("first=",commandArgs())
 lst=grep("last=",commandArgs())
+colskip=grep("colskip=",commandArgs())
 if (length(rr)==0) { Nr=3 } else { Nr=as.numeric(sub("nreps=","",commandArgs()[rr])) }
 if (length(fst)==0) { fst=1} else { fst=as.numeric(sub("first=","",commandArgs()[fst])) }
+if (length(colskip)==0) { colskip=3} else { colskip=as.numeric(sub("colskip=","",commandArgs()[colskip])) }
 
 message(paste("reading",infile,"..."))
-tgg=read.table(infile,sep="\t",header=TRUE)[,-c(1:3)] 
+tgg=read.table(infile,sep="\t",header=TRUE)[,-c(1:colskip)] 
 tgis=tgg>0
 rsum=apply(tgg,2,sum)
 samples=colnames(tgg)	
