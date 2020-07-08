@@ -86,10 +86,16 @@ while (<VCF>) {
 	if ($_=~/^#/) { print and next;}
 	chomp;
 	$total++;
-	@dats=split(/\t/,$_);
-	$chrom=$dats[0];
+	@dats=split(/\s/,$_);
+	if($dats[0]=~/(.+)[_,:](.+)/) {
+		$chrom=$1;
+		$pos=$2;
+	}
+	else {
+		$chrom=$dats[0];
+		$pos=$dats[1];
+	}
 	if (!$chrom0) { $chrom0=$chrom;}
-	$pos=$dats[1];
 	if ( $pos-$poslast < $inter/2 and ($chrom eq $chrom0)) {
 #warn "\t\t\tskipping $pos\n" ;
 		$skipped++;

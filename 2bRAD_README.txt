@@ -537,7 +537,7 @@ paste am args -d " " >mmods
 
 # execute all commands listed in the text file "mmods", save output in a text file "res"
 
-grep RESULT res -A 4 | grep -v Launcher | grep -E "[0-9]|\]" | perl -pe 's/\n//' | perl -pe 's/RESULT/\nRESULT/g' >mmods.res
+grep RESULT res -A 4 | grep -v Launcher | grep -E "[0-9]|\]" | perl -pe 's/res\S//' | perl -pe 's/\n//' | perl -pe 's/RESULT/\nRESULT/g' | grep RESULT >mmods.res
 
 # best likelihood:
 cat mmods.res | awk 'NR == 1 || $5 > max {line = $0; max = $5}END{print line}'
