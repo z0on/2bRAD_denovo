@@ -79,7 +79,7 @@ while (<INP>) {
 	}
 	elsif ($ll==2) { 
 		chomp;
-		$qua=substr($_,length("$,length($_)); 
+		$qua=substr($_,3,length($_)); 
 		$ll=3;
 	}
 	else { $ll=2;}
