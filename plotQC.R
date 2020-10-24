@@ -1,9 +1,31 @@
 # quick script to compute percentiles and plot distributions of quality scores and depths
 # cannibalized by Mikhail Matz from the original script by Matteo Fumagalli
 
-fin <- commandArgs(T)
+#    Arguments:
+#    prefix=[character]  : common prefix of angsd output files
+#    bams=[filename]     : file listing bam files in the order they appear in the data (optional; use for angsd -pileup runs)
 
-cat("", file=paste(fin,".info",sep="",collapse=""))
+pref=grep("prefix=",commandArgs())
+if (length(pref)==0) { stop ("specify prefix of angsd output files\n\nArguments:\nprefix=[character]  : common prefix of angsd output files\nbams=[filename]  : file listing bam files in the order they appear in the data (use for angsd -pileup runs)") }
+pref=sub("prefix=","", commandArgs()[pref])
+
+bams=grep("bams=",commandArgs())
+if(length(bams)>0) { 
+	bamlist=sub("bams=","", commandArgs()[bams])
+} else {
+	bamlist=system(paste("grep 'angsd.-b' ",fin,".arg | perl -pe 's/.+-b\\s(\\S+).+/$1/'",sep=""),intern=TRUE)
+}
+
+# setwd("/Users/c-monstr/Dropbox/angsd_pileup")
+# pref="dd"
+# bamlist="bams.combo"
+
+bams=read.table(bamlist)[,1]
+
+# print a list of samples in order from worst to best covered 
+fin=pref
+
+#cat("", file=paste(fin,".info",sep="",collapse=""))
 
 pdf(paste(fin,".pdf",sep="",collapse=""),height=9,width=3.5)
 par(mfrow=c(3,1))
@@ -45,9 +67,6 @@ abline(v=10,lty=3)
 abline(h=median(1-cumul[10,]),lty=3)
 for (i in 2:ncol(cumul)) { lines(1-cumul[,i],col=rgb(0,0,0,alpha=0.2)) }
 
-# print a list of samples in order from worst to best covered 
-bamlist=system(paste("grep 'angsd.-b' ",fin,".arg | perl -pe 's/.+-b\\s(\\S+).+/$1/'",sep=""),intern=TRUE)
-bams=read.table(bamlist)[,1]
 c5=1-cumul[5,]
 names(c5)=bams
 print("proportion of sites better than coverage of 5 for each sample:")

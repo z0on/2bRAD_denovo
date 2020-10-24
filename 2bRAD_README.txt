@@ -388,7 +388,7 @@ TODO="-doQsDist 1 -doDepth 1 -doCounts 1 -dumpCounts 2"
 angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 1 -out dd 
 
 # summarizing results (using modified script by Matteo Fumagalli)
-Rscript ~/bin/plotQC.R dd >qranks
+Rscript ~/bin/plotQC.R prefix=dd >qranks
 # proportion of sites covered at >5x:
 cat qranks
 
