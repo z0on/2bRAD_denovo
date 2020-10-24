@@ -20,9 +20,11 @@ This repository contains the lab protocol for sample preparation, as well as scr
 - creating and formatting a fake genome out of RAD loci
 - mapping original reads to fake genome
 - exploring coverage depth and genotyping rates
+
 For <10x coverage data:
 - performing PCA and ADMIXTURE analysis based on "fuzzy" genotyping in ANGSD
 - deriving site frequency spectra using ANGSD and analyzing them in Moments
+
 For >10x coverage data:
 - calling variants using GATK's UnifiedGenotyper
 - variant quality score recalibration (VQSR) based on genotyping replicates
