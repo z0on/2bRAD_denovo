@@ -9,6 +9,8 @@ pref=grep("prefix=",commandArgs())
 if (length(pref)==0) { stop ("specify prefix of angsd output files\n\nArguments:\nprefix=[character]  : common prefix of angsd output files\nbams=[filename]  : file listing bam files in the order they appear in the data (use for angsd -pileup runs)") }
 pref=sub("prefix=","", commandArgs()[pref])
 
+fin=pref
+
 bams=grep("bams=",commandArgs())
 if(length(bams)>0) { 
 	bamlist=sub("bams=","", commandArgs()[bams])
@@ -23,7 +25,6 @@ if(length(bams)>0) {
 bams=read.table(bamlist)[,1]
 
 # print a list of samples in order from worst to best covered 
-fin=pref
 
 #cat("", file=paste(fin,".info",sep="",collapse=""))
 
