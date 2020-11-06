@@ -28,13 +28,14 @@ bams=read.table(bamlist)[,1]
 
 #cat("", file=paste(fin,".info",sep="",collapse=""))
 
-pdf(paste(fin,".pdf",sep="",collapse=""),height=9,width=3.5)
-par(mfrow=c(3,1))
+pdf(paste(fin,".pdf",sep="",collapse=""),height=12,width=3.5)
+par(mfrow=c(4,1))
 
 ## plot q-scores
 qs <- read.table(paste(fin,".qs",sep="",collapse=""), head=T, stringsAsFactors=F)
 qs <- cbind(qs, perc=cumsum(qs$counts/1e4)/sum(qs$counts/1e4,na.rm=T))
-plot(qscore~perc,qs,type="s")
+qs$perc=1-qs$perc
+plot(perc~qscore,qs,type="s",ylab="fraction of sites remaining",main=paste(length(indcover),"sites"),xlab="base Q score cutoff")
 write.table( qs, row.names=F, col.names=T, quote=F, sep="\t", file=paste(fin,".info",sep="",collapse=""), append=T)
 
 ## global depth
@@ -62,7 +63,7 @@ for (d in 2:xl){
         cumul=data.frame(cbind(cumul, cumnum/sums))
 }
 cumul=t(cumul)
-plot(1-cumul[,1],type="l",xlab="sample depth", ylab="fraction of sites",ylim=c(0,1),col=rgb(0,0,0,alpha=0.2))
+plot(1-cumul[,1],type="l",xlab="coverage cutoff", ylab="fraction of sites remaining",ylim=c(0,1),col=rgb(0,0,0,alpha=0.2))
 # median proportion of sites with coverage >10, across samples
 abline(v=10,lty=3)
 abline(h=median(1-cumul[10,]),lty=3)
@@ -88,7 +89,8 @@ indcover=apply(ctss,1,sum)
 indcover=indcover/ncol(ctss)
 indcover=sort(indcover,decreasing=T)
 sites=c(1:length(indcover))/length(indcover)
-plot(sites~indcover,type="s",ylab=paste("fraction of",length(indcover),"sites"),xlab="genotyping rate cutoff")
+plot(sites~indcover,type="s",ylab="fraction of sites remaining",xlab="genotyping rate cutoff")
+plot(sites~indcover,type="s",ylab="fraction of sites remaining",xlab="genotyping rate cutoff",log="y")
 
 invisible(dev.off())
 #setwd('~/Dropbox/Documents/ecogeno2018/mcav_classProject_2018/')
