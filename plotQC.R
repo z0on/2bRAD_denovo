@@ -31,6 +31,15 @@ bams=read.table(bamlist)[,1]
 pdf(paste(fin,".pdf",sep="",collapse=""),height=12,width=3.5)
 par(mfrow=c(4,1))
 
+cname=paste(fin,".counts", sep="")
+system(paste("gunzip", paste(cname,".gz",sep="")))
+cts=read.table(cname,sep="\t",header=T)
+cts$X=NULL
+ctss=cts>0
+indcover=apply(ctss,1,sum)
+indcover=indcover/ncol(ctss)
+indcover=sort(indcover,decreasing=T)
+
 ## plot q-scores
 qs <- read.table(paste(fin,".qs",sep="",collapse=""), head=T, stringsAsFactors=F)
 qs <- cbind(qs, perc=cumsum(qs$counts/1e4)/sum(qs$counts/1e4,na.rm=T))
@@ -80,14 +89,6 @@ write.table(data.frame(cbind(sort(c5))),file="quality.txt",quote=F,col.names=F)
 write.table(goods,file="bams.qc",quote=F,row.names=F,col.names=F)
 
 # plot number of sites left after certain genotying rate (-minInd) cutoff
-cname=paste(fin,".counts", sep="")
-system(paste("gunzip", paste(cname,".gz",sep="")))
-cts=read.table(cname,sep="\t",header=T)
-cts$X=NULL
-ctss=cts>0
-indcover=apply(ctss,1,sum)
-indcover=indcover/ncol(ctss)
-indcover=sort(indcover,decreasing=T)
 sites=c(1:length(indcover))/length(indcover)
 plot(sites~indcover,type="s",ylab="fraction of sites remaining",xlab="genotyping rate cutoff")
 plot(sites~indcover,type="s",ylab="fraction of sites remaining",xlab="genotyping rate cutoff",log="y")
