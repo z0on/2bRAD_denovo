@@ -377,8 +377,9 @@ ls *bam >bams
 # -minMapQ 20 : only highly unique mappings (prob of erroneous mapping = 1%)
 # -baq 1 : realign around indels (not terribly relevant for 2bRAD reads mapped with --local option) 
 # -maxDepth : highest total depth (sum over all samples) to assess; set to 10x number of samples
+# -minInd : the minimal number of individuals the site must be genotyped in. Reset to 50% of total N at this stage.
 
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -maxDepth 1000"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minInd 1000 -maxDepth 1000 -minInd"
 
 # T O   D O : 
 TODO="-doQsDist 1 -doDepth 1 -doCounts 1 -dumpCounts 2"
@@ -388,9 +389,9 @@ TODO="-doQsDist 1 -doDepth 1 -doCounts 1 -dumpCounts 2"
 angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 1 -out dd 
 
 # summarizing results (using modified script by Matteo Fumagalli)
-Rscript ~/bin/plotQC.R prefix=dd >qranks
+Rscript ~/bin/plotQC.R prefix=dd
 # proportion of sites covered at >5x:
-cat qranks
+cat quality.txt
 
 # scp dd.pdf to laptop to look at distribution of base quality scores, fraction of sites in each sample passing coverage thresholds, and fraction of sites passing genotyping rates cutoffs. Use these to guide choices of -minQ,  -minIndDepth and -minInd filters in subsequent ANGSD runs
 
