@@ -152,10 +152,10 @@ qjob=$(sbatch --dependency=afterok:$mapsjob a0.slurm | grep "Submitted batch job
 
 #------------ examine dd.pdf, decide on MinIndPerc and whether bams.qc is reasonable
 
-# ----------- CHUNK 3: getting popgen stats
+# ----------- CHUNK 3: population structure based on common variants
 
 export GENOME_REF=all_cc.fasta
-export MinIndPerc=0.5
+export MinIndPerc=0.8
 
 # initial IBS production, detecting and removing clones (see hctree.pdf and resulting bams.nr)
 FILTERS0='-minInd $MI -uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 20 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -maxHetFreq 0.5 -hetbias_pval 1e-3 -skipTriallelic 1'
@@ -163,18 +163,18 @@ TODO0='-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doP
 echo 'export NIND=`cat bams.qc | wc -l`; export MI=`echo "($NIND*$MinIndPerc+0.5)/1" | bc`' >calc1
 echo "source calc1 && angsd -b bams.qc -GL 1 $FILTERS0 $TODO0 -P 12 -out myresult && Rscript ~/bin/detect_clones.R bams.qc myresult.ibsMat 0.15">a1
 ls5_launcher_creator.py -j a1 -n a1 -a tagmap -e matz@utexas.edu -t 2:00:00 -w 1 -q normal
-a1job=$(sbatch --dependency=afterok:$qjob a1.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
-#a1job=$(sbatch a1.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
+# a1job=$(sbatch --dependency=afterok:$qjob a1.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
+a1job=$(sbatch a1.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
 
 # if "highly similar samples" were reported in a1.e* file, examine hctree.pdf and possibly rerun
 # Rscript ~/bin/detect_clones.R bams.qc myresult.ibsMat 0.15
 # with higher or lower cutoff instead of 0.15
 
-# final IBS production
+# final IBS production, assessing "PCA struture" (excess of MDS1-2 signal relative to broken stick model)
 FILTERS1='-minInd $MI2 -uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 20 -snp_pval 1e-5 -minMaf 0.05 -dosnpstat 1 -doHWE 1 -maxHetFreq 0.5 -hetbias_pval 1e-3 -skipTriallelic 1'
 TODO1='-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doPost 1 -doGlf 2'
 echo 'cat bams.nr | sort > bams.NR && mv bams.NR bams.nr && export NIND2=`cat bams.nr | wc -l`; export MI2=`echo "($NIND2*$MinIndPerc+0.5)/1" | bc`' >calc2
-echo "source calc2 && angsd -b bams.nr -GL 1 $FILTERS1 $TODO1 -P 12 -out myresult2 && Rscript ~/bin/pcaStructure.R myresult2.ibsMat > pcaStruc.txt">a2
+echo "source calc2 && angsd -b bams.nr -GL 1 $FILTERS1 $TODO1 -P 12 -out myresult2 && Rscript ~/bin/pcaStructure.R myresult2.ibsMat">a2
 ls5_launcher_creator.py -j a2 -n a2 -a tagmap -e matz@utexas.edu -t 2:00:00 -w 1 
 -q normal
 a2job=$(sbatch --dependency=afterok:$a1job a2.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
@@ -187,29 +187,32 @@ echo 'python ~/pcangsd/pcangsd.py -beagle myresult2.beagle.gz -admix -o pcangsd 
 ls5_launcher_creator.py -j adm -n adm -a tagmap -e matz@utexas.edu -t 0:10:00 -w 1 -q normal
 admjob=$(sbatch --dependency=afterok:$a2job adm.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
 
-# producing sfs for heterozygosity and theta (only for half a megabase of chr5, for speed and memory reasons)
+# ------- genetic diversity stats based on all well-genotyped sites (including invariants)
+# (note the argument -r chr5 on line 199, ie only using chr 5 - we assume that this region is enough to reresent the whole genome)
+
+export GENOME_REF=all_cc.fasta
+export MinIndPerc=0.8
 REF=all_cc.fasta
 FILTERS='-minInd $MI2 -uniqueOnly 1 -skipTriallelic 1 -minMapQ 20 -minQ 20 -doHWE 1 -maxHetFreq 0.5 -hetbias_pval 1e-3'
 TODO="-doSaf 1 -anc $REF -ref $REF -doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doPost 1 -doGlf 2"
-echo 'export NIND2=`cat bams.nr | wc -l`; export MI2=`echo "($NIND*$MinIndPerc+0.5)/1" | bc`' >calc2
-echo "source calc2 && angsd -b bams.nr -r chr5:1-500000 -GL 1 -P 12 $FILTERS $TODO -out chr5">sfsj
+echo 'export NIND2=`cat bams.nr | wc -l`; export MI2=`echo "($NIND2*$MinIndPerc+0.5)/1" | bc`' >calc2
+echo "source calc2 && angsd -b bams.nr -r chr5 -GL 1 -P 12 $FILTERS $TODO -out chr5 && realSFS chr5.saf.idx -P 12 -fold 1 > chr5.sfs && realSFS saf2theta chr5.saf.idx -outname chr5 -sfs chr5.sfs -fold 1 && thetaStat do_stat chr5.thetas.idx -outnames chr5 && grep \"chr\" chr5.pestPG | awk '{ print \$4/\$14}' >piPerChrom">sfsj
 ls5_launcher_creator.py -j sfsj -n sfsj -t 2:00:00 -e matz@utexas.edu -w 1 -a tagmap -q normal
 sfsjob=$(sbatch --dependency=afterok:$a1job sfsj.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
 #sfsjob=$(sbatch sfsj.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
 
-# thetaStats: genetic diversity and neutrality statistics like Tajima's D
-TODO="-doSaf 1 -doThetas 1 -anc $REF -ref $REF"
-echo "zcat chr5.mafs.gz | cut -f 1,2 | tail -n +2 >chr5.sites && realSFS chr5.saf.idx > chr5.sfs && angsd sites index chr5.sites && angsd -b bams.nr -r chr5 -sites chr5.sites -GL 1 -P 12 $TODO -pest chr5.sfs -out chr5s && thetaStat do_stat chr5s.thetas.idx -outnames chr5s" >thet
-ls5_launcher_creator.py -j thet -n thet -t 2:00:00 -e matz@utexas.edu -w 1 -a tagmap -q normal
-thjob=$(sbatch --dependency=afterok:$sfsjob thet.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
 
 # individual heterozygosities (proportion of heterozygotes across SNPs that pass sfsjob filters)
-echo "Rscript ~/bin/heterozygosity_beagle.R chr5.beagle.gz" >bg
+echo "Rscript ~/bin/heterozygosity_beagle.R chr5.beagle.gz >indHets" >bg
 ls5_launcher_creator.py -j bg -n bg -a tagmap -e matz@utexas.edu -t 12:00:00 -w 1 -q normal
 sbatch --dependency=afterok:$sfsjob bg.slurm
+# heterozygosity_beagle.R script (by Nathaniel Pope) outputs *_zygosity.RData R data bundle containing AFS (rows) for each individual (columns). The proportion of heterozygotes is the second row. Individual heterozygosities are also printed out to STDOUT (in the case above, saved to text file indHets)
 
-# pi per "chromosome"
-grep "chr" chr5s.pestPG | awk '{ print $4/$14}'
+
+
+
+
+
 
 
 #### the following should probably be retired - inbreeding is better done in the form of individual heterozygosities, and relatedness ~ kinship from PCAngsd. (did not explore this yet, tho)
@@ -239,5 +242,6 @@ echo 'export NIND2=`cat bams.nr | wc -l`; export NS=``zcat g3.mafs.gz | wc -l`' 
 echo 'source calc3 && zcat g3.mafs.gz | cut -f5 |sed 1d >freq && ngsRelate  -g g3.glf.gz -n $NIND -f freq >g3.relatedness' >rel
 ls5_launcher_creator.py -j rel -n rel -a tagmap -e matz@utexas.edu -t 2:00:00 -w 1 -q normal
 reljob=$(sbatch rel.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
+
 
 
