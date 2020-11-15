@@ -33,7 +33,7 @@ mds1.signal=function(x) {
   return(slope1/slope0)
 }
 
-plot(eigsn)
+plot(pp0$CA$eig/sum(pp1$CA$eig))
 
 # jackknifing the MDS signal (80% resampling)
 mdss=c()
