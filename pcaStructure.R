@@ -20,6 +20,15 @@ qc=qc[bams,]
 # partial PCoA, taking out the variation due to coverage
 pp0=capscale(ma~1+Condition(qc$q))
 
+# removing outlier samples by pc1
+pc1=scores(pp0,display="sites",choices=1)
+goods=bams[which(pc1>=quantile(pc1,0.05) & pc1<=quantile(pc1,0.95))]
+ma=ma[goods,goods]
+qc=qc[goods,]
+length(goods)
+
+pp0=capscale(ma~1+Condition(qc$q))
+
 pdf(file=paste(inf,"_pcoa_eigens.pdf",sep=""),height=3.8,width=12)
 par(mfrow=c(1,3))
 plot(pp0)
@@ -28,7 +37,7 @@ plot(pp0)
 mds1.signal=function(x) {
   N=length(x)
   nulls=round(c(N/2-2,N/2+2),0)
-  slope1=(x[1]-x[3])/2
+  slope1=(x[1]-x[2])
   slope0=(x[nulls[1]]-x[nulls[2]])/4
   return(slope1/slope0)
 }
