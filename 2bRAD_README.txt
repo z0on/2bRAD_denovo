@@ -148,6 +148,14 @@ wget https://www.dropbox.com/s/toxnlvk8rhe1p5h/stairway_plot_v2beta2.zip
 unzip stairway_plot_v2beta2.zip
 mv stairway_plot_v2beta2 stairway_plot_v2beta
 
+# ---- PCAngsd
+
+cd
+module load python2
+git clone https://github.com/Rosemeis/pcangsd.git
+cd pcangsd/
+python setup.py build_ext --inplace
+
 -------  ADMIXTURE
 
 cd ~/bin/
@@ -374,17 +382,17 @@ ls *bam >bams
 #----------- assessing base qualities and coverage depth
 
 # angsd settings:
-# -minMapQ 20 : only highly unique mappings (prob of erroneous mapping = 1%)
+# -minMapQ 20 : only highly unique mappings (prob of erroneous mapping =< 1%)
 # -baq 1 : realign around indels (not terribly relevant for 2bRAD reads mapped with --local option) 
 # -maxDepth : highest total depth (sum over all samples) to assess; set to 10x number of samples
 # -minInd : the minimal number of individuals the site must be genotyped in. Reset to 50% of total N at this stage.
 
-FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minInd 1000 -maxDepth 1000 -minInd"
+FILTERS="-uniqueOnly 1 -remove_bads 1 -minMapQ 20 -maxDepth 1000 -minInd 1000"
 
 # T O   D O : 
 TODO="-doQsDist 1 -doDepth 1 -doCounts 1 -dumpCounts 2"
 
-# in the following line, -r argument is one chromosome or contig to work with (no need to do this for whole genome as long as the chosen chromosome or contig is long enough)
+# in the following line, -r argument is one chromosome or contig to work with (no need to do this for whole genome as long as the chosen chromosome or contig is long enough, ~1 Mb. When mapping to a real genome, consider chr1:1-1000000 )
 # (look up lengths of your contigs in the header of *.sam files)
 angsd -b bams -r chr1 -GL 1 $FILTERS $TODO -P 1 -out dd 
 
@@ -413,7 +421,17 @@ angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
 NSITES=`zcat myresult.mafs.gz | wc -l`
 echo $NSITES
 
-# LD: (use rEM for WGCNA, to look for signatures of polygenic selection):
+# ------- PCAngsd: estimating admixture, kinship, and SNP covariance (note: inbreeding is better estimated as individual heterozygosities later, based on all sites, to avoid ascertainment bias)
+
+module load python2
+python ~/pcangsd/pcangsd.py -beagle myresult.beagle.gz -admix -o pcangsd -inbreed 2 -kinship -selection -threads 12
+
+# scp bams, myresult.ibsMat, and pcangsd* files to laptop, plot it in R:
+# use admixturePlotting_pcangsd.R to plot (will require a table of bams vs sampling locations)
+
+# scp *Mat, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
+
+# ------ LD: (use rEM column for LD networks method, to look for signatures of polygenic selection):
 NS=`zcat myresult.geno.gz | wc -l`
 NB=`cat bams | wc -l`
 zcat myresult.mafs.gz | tail -n +2 | cut -f 1,2 > mc1.sites
@@ -421,56 +439,35 @@ module load gsl
 ngsLD --geno myresult.geno.gz --probs 1 --n_ind $NB --n_sites $NS --max_kb_dist 0 --pos mc1.sites --out myresult.LD --n_threads 12 --extend_out 1
 
 
-# NgsAdmix for K from 2 to 5 : do not run if the dataset contains clones or genotyping replicates!
-for K in `seq 2 5` ; 
-do 
-NGSadmix -likes myresult.beagle.gz -K $K -P 10 -o mydata_k${K};
-done
-
-# alternatively, to use real ADMIXTURE on called SNPs (requires plink and ADMIXTURE):
-gunzip myresult.vcf.gz
-plink --vcf myresult.vcf --make-bed --allow-extra-chr --out myresult
-for K in `seq 1 5`; \
-do admixture --cv myresult.bed $K | tee myresult_${K}.out; done
-
-# which K is least CV error?
-grep -h CV myresult_*.out
-
-# scp the *.Q and inds2pops files to laptop, plot it in R:
-# use admixturePlotting2a.R to plot (will require minor editing - population names)
-
-# scp *Mat, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
-
 # relatedness (must run ANGSD with option '-doGlf 3' to make this work)
-# (column "rab" in the result is relatedness coefficient, Fa and Fb are individual inbreeding coefficients):
+# (column "rab" in the result is relatedness coefficient, Fa and Fb are individual inbreeding coefficients - beware of ascentainment bias tho!):
 zcat myresult.mafs.gz | cut -f5 |sed 1d >freq
 NIND=`cat bams | wc -l`
 ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 
-# individual heterozygosities (proportion of heterozygotes across SNPs that pass filters)
-Rscript heterozygosity_beagle.R myresult.beagle.gz
-# this script (by Nathaniel Pope) outputs an R data bundle containing AFS (rows) for each individual (columns). The proportion of heterozygotes is the second row.
 
-#==========================
-# ANDSD => SFS for demographic analysis
+#======= ANDSD on all well-genotyped sites: genetic diversity stats, SFS for demographic analysis
 
 # make separate files listing bams for each population (without clones and replicates)
 # assume we have two populations, pop0 and pop1, 20 individuals each, with corresponding bams listed in pop0.bams and pop1.bams
 
+# NOTE: for speed and memory sake, it might make sense to run the following on a subset of the data,
+# specifying -r or -rf argument for angsd to look only at a fraction of the reference genome.
+
 # generating list of filtered SNP sites for SFS production (note: no filters that distort allele frequency!):
 # sb - strand bias filter; only use for 2bRAD, GBS or WGS (not for ddRAD or RADseq)
-# hetbias - detects weird heterozygotes because they have unequal representation of alleles 
-# set minInd to 80-90% of all your individuals (depending on the results from quality control step)
-FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 20 -minQ 25 -doHWE 1 -sb_pval 1e-5 -hetbias_pval 1e-5 -minInd 18 "
-TODO="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doPost 2 -doGeno 11"
+# hetbias - detects weird heterozygotes because they have unequal representation of alleles
+# maxHetFreq - filters out lumped paralogs 
+# set minInd to 80% of all your individuals (depending on the results from quality control step)
+# If the goal is genome-wide diversity statistics, consider running this on a fraction of genome (a few Mb) - use angsd options -r or -rf
+FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -doHWE 1 -sb_pval 1e-5 -hetbias_pval 1e-5 -minInd 18 -maxHetFreq 0.5"
+TODO="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doPost 2 -doGeno 11 -doGlf 2"
 # ANGSD command:
 angsd -b bams -GL 1 -P 1 $FILTERS $TODO -out sfilt
 
-# filtering out sites where heterozygotes likely comprise more than 50% of all genotypes (likely lumped paralogs)
-# (this fuzzy procedure and HetMajorityProb.py script have been developed by Nathaniel "Nate" S. Pope, nspope@utexas.edu, at UT Austin) 
-# NOTE: this step requires python with numpy and scipy; also the file poibin.py (included in the repo) should be placed in your PYTHONPATH
-zcat sfilt.geno.gz | python ~/bin/HetMajorityProb.py | awk "\$6 < 0.75 {print \$1\"\t\"\$2}" > allSites
-angsd sites index allSites
+# individual heterozygosities (proportion of heterozygotes across SNPs that pass filters)
+Rscript heterozygosity_beagle.R sfilt.beagle.gz
+# this script (by Nathaniel Pope) outputs an R data bundle containing AFS (rows) for each individual (columns). The proportion of heterozygotes is the second row.
 
 # estimating site frequency likelihoods for each population, also saving allele frequencies (for genome scan) 
 export GENOME_REF=mygenome.fasta
