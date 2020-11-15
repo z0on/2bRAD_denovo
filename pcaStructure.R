@@ -25,7 +25,7 @@ pc1=scores(pp0,display="sites",choices=1)
 goods=bams[which(pc1>=quantile(pc1,0.05) & pc1<=quantile(pc1,0.95))]
 ma=ma[goods,goods]
 qc=qc[goods,]
-length(goods)
+#length(goods)
 
 pp0=capscale(ma~1+Condition(qc$q))
 
@@ -46,7 +46,7 @@ plot(pp0$CA$eig/sum(pp0$CA$eig))
 
 # jackknifing the MDS signal (80% resampling)
 mdss=c()
-for (i in 1:199) {
+for (i in 1:499) {
   choose=sample(1:nrow(ma),round(nrow(ma)*0.8,0))
   ma1=ma[choose,choose]
   qc1=qc[choose,]
