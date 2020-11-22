@@ -266,6 +266,9 @@ ngs_concat.pl)
 # AND IF you sequenced your double-barcoded, deduplicatable libraries on HiSeq 4000 alone
 # (resulting in poor quality at restriction site and adaptor bases) and you have used BcgI enzyme, use this:
 2bRAD_trim_launch_dedup2.pl fastq > trims
+# Once on Nextseq we saw annoying Ns in the upstream adaptor (in place of invariant CC there), if you encounter that, use this:
+2bRAD_trim_launch_dedup_N2.pl fastq > trims
+
 
 # the file trims now contains a long list of commands, one per fastq file, that we will need to execute. TACC uses Launcher module to enable parallele launch of multiple commands: https://github.com/TACC/launcher 
 # I very highly recommend it - it should work on any SLURM-based system. Otherwise, if you don't know how to run hundreds of parallel jobs on your cluster, consult your IT support - there must be a way. 

@@ -204,9 +204,9 @@ admjob=$(sbatch --dependency=afterok:$a2job adm.slurm | grep "Submitted batch jo
 
 export GENOME_REF=all_cc.fasta
 export MinIndPerc=0.8
-REF=all_cc.fasta
+
 FILTERS='-minInd $MI2 -uniqueOnly 1 -skipTriallelic 1 -minMapQ 20 -minQ 20 -doHWE 1 -maxHetFreq 0.5 -hetbias_pval 1e-3'
-TODO="-doSaf 1 -anc $REF -ref $REF -doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doPost 1 -doGlf 2"
+TODO="-doSaf 1 -anc $REF -ref $GENOME_REF -doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doPost 1 -doGlf 2"
 echo 'export NIND2=`cat bams.nr | wc -l`; export MI2=`echo "($NIND2*$MinIndPerc+0.5)/1" | bc`' >calc2
 echo "source calc2 && angsd -b bams.nr -r chr5 -GL 1 -P 12 $FILTERS $TODO -out chr5 && realSFS chr5.saf.idx -P 12 -fold 1 > chr5.sfs && realSFS saf2theta chr5.saf.idx -outname chr5 -sfs chr5.sfs -fold 1 && thetaStat do_stat chr5.thetas.idx -outnames chr5 && grep \"chr\" chr5.pestPG | awk '{ print \$4/\$14}' >piPerChrom">sfsj
 ls5_launcher_creator.py -j sfsj -n sfsj -t 2:00:00 -e matz@utexas.edu -w 1 -a tagmap -q normal
@@ -219,6 +219,12 @@ echo "Rscript ~/bin/heterozygosity_beagle.R chr5.beagle.gz >indHets" >bg
 ls5_launcher_creator.py -j bg -n bg -a tagmap -e matz@utexas.edu -t 12:00:00 -w 1 -q normal
 sbatch --dependency=afterok:$sfsjob bg.slurm
 # heterozygosity_beagle.R script (by Nathaniel Pope) outputs *_zygosity.RData R data bundle containing AFS (rows) for each individual (columns). The proportion of heterozygotes is the second row. Individual heterozygosities are also printed out to STDOUT (in the case above, saved to text file indHets)
+
+# relatedness with NgsRelate
+echo 'export NIND2=`cat bams.nr | wc -l`; export NS=``zcat g3.mafs.gz | wc -l`' >calc3
+echo 'source calc3 && zcat g3.mafs.gz | cut -f5 |sed 1d >freq && ngsRelate  -g g3.glf.gz -n $NIND -f freq >g3.relatedness' >rel
+ls5_launcher_creator.py -j rel -n rel -a tagmap -e matz@utexas.edu -t 2:00:00 -w 1 -q normal
+reljob=$(sbatch rel.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
 
 
 
