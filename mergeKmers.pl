@@ -20,7 +20,7 @@ maxInd=[integer] maximum number of individuals the kmer must be seen in. Default
 prints to STDOUT
 
 Example:
-mergeKmers.pl kmerfiles minDP=5 minInd=5 maxInd=50 > kmers_5to50.txt
+mergeKmers.pl kmerfiles minDP=5 minInd=5 > kmers.txt
 
 ";
 

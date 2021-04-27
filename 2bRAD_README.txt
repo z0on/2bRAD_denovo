@@ -472,6 +472,10 @@ angsd -b bams -GL 1 -P 1 $FILTERS $TODO -out sfilt
 Rscript heterozygosity_beagle.R sfilt.beagle.gz
 # this script (by Nathaniel Pope) outputs an R data bundle containing AFS (rows) for each individual (columns). The proportion of heterozygotes is the second row.
 
+# collecting and indexing filter-passing sites
+zcat sfilt.mafs.gz | cut -f 1,2 | tail -n +2 >allSites
+angsd sites index allSites
+
 # estimating site frequency likelihoods for each population, also saving allele frequencies (for genome scan) 
 export GENOME_REF=mygenome.fasta
 TODO="-doSaf 1 -doMajorMinor 1 -doMaf 1 -doPost 1 -anc $GENOME_REF -ref $GENOME_REF"

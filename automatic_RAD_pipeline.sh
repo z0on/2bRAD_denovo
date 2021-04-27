@@ -90,7 +90,7 @@ $HOME/edirect/esearch -db sra -query $BioProject | efetch --format runinfo |cut 
 
 >gets
 for A in `cat $BioProject.SRR`;do 
-echo "fast-dump-orig.2.10.0 $A">>gets;
+echo "fastq-dump-orig.2.10.5 $A">>gets;
 done
 ls5_launcher_creator.py -j gets -n gets -a tagmap -e matz@utexas.edu -t 12:00:00 -w 24 -q normal
 getsjob=$(sbatch gets.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
