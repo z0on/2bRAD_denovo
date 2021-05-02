@@ -65,6 +65,7 @@ xl <- 20
 depp=depp[,-1]
 cumul=c()
 sums=apply(depp,1,sum)
+sums=sums+0.1
 cumnum=depp[,1]
 cumul=data.frame(cbind(cumul,cumnum/sums))
 for (d in 2:xl){
