@@ -434,7 +434,27 @@ python ~/pcangsd/pcangsd.py -beagle myresult.beagle.gz -admix -o pcangsd -inbree
 
 # scp *Mat, *qopt and bams files to laptop, use angsd_ibs_pca.R to plot PCA and admixturePlotting_v4.R to plot ADMIXTURE
 
+# ------individual heterozygosity, by running angsd -dosaf on individual bams
+# using all sites (variable and invariable) - as it shoudl be done
+
+# for denovo: fake genome: 
+GENOME_FASTA=cdh_alltags_cc.fasta
+# for reference-based: 
+GENOME_FASTA=mygenome.fasta
+
+# adjust setMinDepthInd below as desired. Currently set to only look at sites with x10+ coverage.
+# also feel free to include additional filters (but not -snp_pval and -minMaf, since we want to look at all well-genotyped sites)
+FILTERS='-minInd 1 -setMinDepthInd 10 -uniqueOnly 1 -minMapQ 30 -minQ 20'
+>hets
+>mybams.het
+for F in `cat bams`; do
+echo "angsd -i $F -anc $GENOME_FASTA $FILTERS -GL 1 -dosaf 1 -out ${F/.bam/} && realSFS ${F/.bam/}.saf.idx >${F/.bam/}.ml | awk -v file=$F '{print file\"\t\"(\$1+\$2+\$3)\"\t\"\$2/(\$1+\$2+\$3)}' ${F/.bam/}.ml >>mybams.het">>hets;
+done
+# execute all commands in hets; it will produce a tab-delimited table mybams.het:
+# [bam filename]   [total number of sites passing filters]   [heterozygosity]
+
 # ------ LD: (use rEM column for LD networks method, to look for signatures of polygenic selection):
+
 NS=`zcat myresult.geno.gz | wc -l`
 NB=`cat bams | wc -l`
 zcat myresult.mafs.gz | tail -n +2 | cut -f 1,2 > mc1.sites
@@ -467,10 +487,6 @@ FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -d
 TODO="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doPost 2 -doGeno 11 -doGlf 2"
 # ANGSD command:
 angsd -b bams -GL 1 -P 1 $FILTERS $TODO -out sfilt
-
-# individual heterozygosities (proportion of heterozygotes across SNPs that pass filters)
-Rscript heterozygosity_beagle.R sfilt.beagle.gz
-# this script (by Nathaniel Pope) outputs an R data bundle containing AFS (rows) for each individual (columns). The proportion of heterozygotes is the second row.
 
 # collecting and indexing filter-passing sites
 zcat sfilt.mafs.gz | cut -f 1,2 | tail -n +2 >allSites
