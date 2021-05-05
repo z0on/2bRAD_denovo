@@ -442,15 +442,13 @@ GENOME_FASTA=cdh_alltags_cc.fasta
 # for reference-based: 
 GENOME_FASTA=mygenome.fasta
 
-# adjust setMinDepthInd below as desired. Currently set to only look at sites with x10+ coverage.
-# also feel free to include additional filters (but not -snp_pval and -minMaf, since we want to look at all well-genotyped sites)
-FILTERS='-minInd 1 -setMinDepthInd 10 -uniqueOnly 1 -minMapQ 30 -minQ 20'
+# adjust setMinDepth and setMaxDepth below as desired. Currently set to only look at sites with 10x-30x coverage.
+FILTERS='-minInd 1 -setMinDepth 10 -setMaxDepth 30 -uniqueOnly 1 -minMapQ 30 -minQ 20'
 >hets
->mybams.het
-for F in `cat bams`; do
-echo "angsd -i $F -anc $GENOME_FASTA $FILTERS -GL 1 -dosaf 1 -out ${F/.bam/} && realSFS ${F/.bam/}.saf.idx >${F/.bam/}.ml | awk -v file=$F '{print file\"\t\"(\$1+\$2+\$3)\"\t\"\$2/(\$1+\$2+\$3)}' ${F/.bam/}.ml >>mybams.het">>hets;
-done
-# execute all commands in hets; it will produce a tab-delimited table mybams.het:
+>goodbams.het
+for F in `cat goodbams`; do
+echo "angsd -i $F -anc $GENOME_FASTA $FILTERS -GL 1 -doSaf 1 -doCounts 1 -out ${F/.bam/} && realSFS ${F/.bam/}.saf.idx >${F/.bam/}.ml && awk -v file=$F '{print file\"\t\"(\$1+\$2+\$3)\"\t\"\$2/(\$1+\$2+\$3)}' ${F/.bam/}.ml >>goodbams.het">>hets;
+done# execute all commands in hets; it will produce a tab-delimited table mybams.het:
 # [bam filename]   [total number of sites passing filters]   [heterozygosity]
 
 # ------ LD: (use rEM column for LD networks method, to look for signatures of polygenic selection):
