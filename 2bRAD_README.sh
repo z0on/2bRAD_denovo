@@ -1,5 +1,5 @@
 2bRAD de novo AND reference-based walkthrough
-June 2018
+July 2021
 Mikhail Matz (matz@utexas.edu) - ask me if anything does not work
 
 =============================================
