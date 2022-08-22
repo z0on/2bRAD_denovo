@@ -69,13 +69,16 @@ nano .bashrc
 
 # ---- PCAngsd
 
+# activate your favorite conda environment, then
+conda install -c anaconda python
+conda install -c anaconda numpy
+conda install -c anaconda scipy
+conda install -c anaconda cython
 cd
-module load python2
 git clone https://github.com/Rosemeis/pcangsd.git
-cd pcangsd/
+cd pcangsd
 python setup.py build_ext --inplace
-
-Add the paths to all newly installed programs to your $PATH (in .bashrc)
+pip3 install -e .
 
 #------------------------------------------------------------------------
 #---- CHUNK 1:  getting data
@@ -186,7 +189,7 @@ a1job=$(sbatch a1.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
 FILTERS1='-minInd $MI2 -uniqueOnly 1 -remove_bads 1 -minMapQ 20 -minQ 20 -snp_pval 1e-5 -minMaf $MAF -dosnpstat 1 -doHWE 1 -maxHetFreq 0.5 -hetbias_pval 1e-3 -skipTriallelic 1'
 TODO1='-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doPost 1 -doGlf 2'
 echo 'cat bams.nr | sort > bams.NR && mv bams.NR bams.nr && export NIND2=`cat bams.nr | wc -l`; export MI2=`echo "($NIND2*$MinIndPerc+0.5)/1" | bc`; export MAF=`echo "3/(2*$NIND2)" | bc -l`' >calc2
-echo "source calc2 && angsd -b bams.nr -GL 1 $FILTERS1 $TODO1 -P 12 -out myresult2 && Rscript ~/bin/pcaStructure.R myresult2.ibsMat">a2
+echo "source calc2 && angsd -b bams.nr -GL SeqTools1 $FILTERS1 $TODO1 -P 12 -out myresult2 && Rscript ~/bin/pcaStructure.R myresult2.ibsMat">a2
 s2_launcher_creator.py -j a2 -n a2 -a tagmap -e matz@utexas.edu -t 2:00:00 -w 1 
 -q normal
 a2job=$(sbatch --dependency=afterok:$a1job a2.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
@@ -257,7 +260,7 @@ zcat g3.mafs.gz | cut -f5 |sed 1d >freq
 
 # relatedness with NgsRelate
 echo 'export NIND2=`cat bams.nr | wc -l`; export NS=``zcat g3.mafs.gz | wc -l`' >calc3
-echo 'source calc3 && zcat g3.mafs.gz | cut -f5 |sed 1d >freq && ngsRelate  -g g3.glf.gz -n $NIND -f freq >g3.relatedness' >rel
+echo 'source calc3 && zcat g3.mafs.gz | cut -f5 |sed 1d >freq && ngsRelate  -g g3.glf.gz -n $NIND2 -f freq >g3.relatedness' >rel
 s2_launcher_creator.py -j rel -n rel -a tagmap -e matz@utexas.edu -t 2:00:00 -w 1 -q normal
 reljob=$(sbatch rel.slurm | grep "Submitted batch job" | perl -pe 's/\D//g')
 
