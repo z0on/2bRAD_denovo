@@ -255,9 +255,8 @@ java -jar $TACC_PICARD_T_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA
 # Step 1: Splitting by in-read barcode, deduplicating and quality-filtering the reads
 
 # creating a file of commands to run (assuming reads are in fastq files, one file per sample.
-# (if samples were spread across several lanes, concatenate them first using 
-ngs_concat.pl) 
-2bRAD_trim_launch_dedup_noCC.pl fastq > trims
+# (if samples were spread across several lanes, concatenate them first using ngs_concat.pl) 
+2bRAD_trim_launch_dedup.pl fastq > trims
 
 # Note: use this command instead of the one above if you have 2bRAD libraries made with oligos ordered before March 2021:
 2bRAD_trim_launch_dedup.pl fastq > trims
