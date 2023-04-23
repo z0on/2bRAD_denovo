@@ -47,7 +47,7 @@ my $site='.{12}CGA.{6}TGC.{12}|.{12}GCA.{6}TCG.{12}';
 if ("@ARGV"=~/site=(\S+)/){ $site=$1;}
 my $bcod="[ATGC]{4}";
 if ("@ARGV"=~/bc2=(\S+)/){ $bcod=$1;}
-my $degen="[ATGC][ATGC][AG][AT]CC";
+my $degen="[ATGC][ATGC][AG][AT]";
 my $adap="AGATC?";
 if ("@ARGV"=~/adaptor=(\S+)/){ $adap=$1;}
 my $clip=0;
