@@ -259,7 +259,7 @@ java -jar $TACC_PICARD_T_DIR/picard.jar CreateSequenceDictionary R=$GENOME_FASTA
 2bRAD_trim_launch_dedup.pl fastq > trims
 
 # Note: use this command instead of the one above if you have 2bRAD libraries made with oligos ordered before March 2021:
-2bRAD_trim_launch_dedup.pl fastq > trims
+2bRAD_trim_launch_dedup_old.pl fastq > trims
 # use this command instead of the one above if you have 2bRAD libraries without degenerate tag but with 4-base in-line barcode:
 2bRAD_trim_launch.pl fastq barcode2=4 > trims
 # And if you have the original-style libraries without degenerate tag and without in-line barcode, use this:
