@@ -597,7 +597,7 @@ awk '{print $1"\t"$2-2000"\t"$3+2000"\t"$4}' gene_regions.tab '> genes.txt
 
 #============= Bayescan: looking for Fst outliers
 
-# Converting vcf (using PGDspider) to Bayescan format: 
+# Converting vcf or bcf (using PGDspider) to Bayescan format: 
 
 # make tab-delimited file called bspops LISTING assignments of individuals (as they are named in the vcf file) to populations, for example:
 ind1	pop0
@@ -606,10 +606,9 @@ ind3	pop1
 ind4	pop1
 
 
-
 # create a file called vcf2bayescan.spid containing this text:
 echo "############
-# VCF Parser questions
+# VCF Parser questions (replace VCF with BCF in the line below if you used ANGSD to make bcf instead of vcf)
 PARSER_FORMAT=VCF
 # Do you want to include a file with population definitions?
 VCF_PARSER_POP_QUESTION=true
@@ -624,7 +623,7 @@ VCF_PARSER_READ_QUESTION=
 # Take most likely genotype if "PL" or "GL" is given in the genotype field?
 VCF_PARSER_PL_QUESTION=true
 # Do you want to exclude loci with only missing data?
-VCF_PARSER_EXC_MISSING_LOCI_QUESTION=false
+VCF_PARSER_EXC_MISSING_LOCI_QUESTION=true
 # Select population definition file:
 VCF_PARSER_POP_FILE_QUESTION=./bspops
 # Only output SNPs with a phred-scaled quality of at least:
