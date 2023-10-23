@@ -514,67 +514,46 @@ realsfs2dadi.pl dadiout 20 20 >2pops_dadi.data
 
 #===================== 2d AFS analysis using Moments
 
-# get Misha's Moments scripts collection
-cd ~
-git clone https://github.com/z0on/AFS-analysis-with-moments.git
-# set your $PATH to include the AFS-analysis-with-moments directory
+# This part has it own github page now: https://github.com/z0on/AFS-analysis-with-moments
+# If you just want to generate nice "bagged" AFS for plotting:
 
-# print folded 2d SFS - for denovo or when mapping to genome of the studied species
-# (change numbers to 2 x 0.9 x number of samples for in each pop):
-2dAFS_fold.py 2pops_dadi.data pop0 pop1 36 36
+export GenRate=0.75 # desired genotyping rate
+export N1=`wc -l pop1.bams`
+export N2=`wc -l pop2.bams`
+export MI1=`echo "($N1*$GenRate+0.5)/1" | bc`
+export MI2=`echo "($N2*$GenRate+0.5)/1" | bc`
+FILTERS='-uniqueOnly 1 -skipTriallelic 1 -minMapQ 30 -minQ 30 -doHWE 1 -maxHetFreq 0.5 -hetbias_pval 1e-5'
+# add `-sb_pval 1e-5` (strand bias) to FILTERS if you have 2bRAD, GBS, or WGS data. Other types of RAD only sequence one strand so -sb_pval filter would remove everything.
 
-# print unfolded 2d SFS - if mapping to genome of sister species
-# (change numbers to 2 x 0.9 x number of samples for in each pop):
-2dAFS.py 2pops_dadi.data pop0 pop1 36 36
+# calculating SFS in angsd - will do 5 bootstraps and then average them
+export GENOME_REF=mygenome.fasta # reference to which the reads were mapped
+TODO="-doSaf 1 -doMajorMinor 1 -doMaf 1 -doPost 1 -dosnpstat 1 -anc $GENOME_REF -ref $GENOME_REF"
+angsd -b pop1.bams -GL 1 -P 4 -minInd $MI1 $FILTERS $TODO -out pop1
+angsd -b pop2.bams -GL 1 -P 4 -minInd $MI2 $FILTERS $TODO -out pop2 
+realSFS pop1.saf.idx pop2.saf.idx -ref $GENOME_REF -anc $GENOME_REF -bootstrap 5 -P 1 -resample_chr 1 >p12
 
-# ------ multimodel inference: fit a diversity of 2-population models, then select the best one based on AIC.
-# there are models with a period of exponential growth ("IM" models), models with one, two or three different size and/or migration rate epochs ("SC" models, including models with no migration in some epochs), models with symmetrical migration ("sm" models, in other cases migration is asymmetrical), models with two types of genomic loci ("genomic islands") introgressing at different rates ("i" models), and some fun combinations thereof.
-# differences between models are summarized in excel table moments_multimodels.xls
+# averaging bootstraps and writing downs single-line type 2dSFS:
+SFSIZE="21 21" # 2N+1 for each population. In this case we assume that we have sampled 10 diploid individuals from each `pop1` and `pop2`.
+echo $SFSIZE >p12.sfs
+cat p12 | awk '{for (i=1;i<=NF;i++){a[i]+=$i;}} END {for (i=1;i<=NF;i++){printf "%.3f", a[i]/NR; printf "\t"};printf "\n"}' >> p12.sfs
 
-# read about multimodel inference here: 
-# https://pdfs.semanticscholar.org/a696/9a3b5720162eaa75deec3a607a9746dae95e.pdf
+# To plot and project this SFS to fewer samples, use python script 2dAFS.py from this location: 
+# https://github.com/z0on/AFS-analysis-with-moments/tree/master/multimodel_inference/py3_v1
+# Requires matplotlib, pylab, numpy, sys, and moments packages
 
-# this HAS to be parallelized - we need to fit ~100 models 10 times to make sure each model converges at its best fit at least once.
-
-# input line: the last four numbers are:
-# - projections (2 x 0.9 x number of samples) for in each pop;
-# - mutation rate per gamete per generation
-# - generation time, in thousand years
-
-# if your alleles are polarized into ancestral and derived, for example by mapping to a sister species genome: 
-export MODELS=~/AFS-analysis-with-moments/multimodel_inference/allmodels_unfolded
-# else:
-export MODELS=~/AFS-analysis-with-moments/multimodel_inference/allmodels_folded
-
-ARGS="2pops_dadi.data pop0 pop1 36 36 0.02 0.005"
-NREPS=10
->am
-for i in `seq 1 $NREPS`;do 
-cat $MODELS >>am;
-done
-NMODELS=`cat am | wc -l`
->args
-for i in `seq 1 $NMODELS`; do
-echo $ARGS >>args;
-done
-paste am args -d " " >mmods
-
-# execute all commands listed in the text file "mmods", save output in a text file "res"
-
-grep RESULT res -A 4 | grep -v Launcher | grep -E "[0-9]|\]" | perl -pe 's/res\S//' | perl -pe 's/\n//' | perl -pe 's/RESULT/\nRESULT/g' | grep RESULT >mmods.res
-
-# best likelihood:
-cat mmods.res | awk 'NR == 1 || $5 > max {line = $0; max = $5}END{print line}'
-
-# extracting likelihoods and parameter numbers for AIC:
-cut -f 2,3,4,5 -d " " mmods.res >likes
-
-# use R script deltaAIC_multimodels.R to find best-fitting model.
-# using model ID number that the R script will list: 
-# - examine the model's graphic output (*.pdf of actual and modeled SFS, and *.png of the model graph)
-# - grep fitted model parameters and their SDs from *.mom files
-
-# the order of parameters are listed in files unfolded_params and folded_params. Typically pop size parameters are first, then times, then migration rates, then the fraction of genomic "islands" (in "i"  models), then percentage of misidentified ancestral states (in unfolded models).
+# This SFS can also be plotted in R simply, like this: 
+'''R
+sfs2matrix=function(sfs,n1,n2,zero.ends=TRUE) {
+  dd=matrix(ncol=2*n1+1,nrow=2*n2+1,sfs)
+  if(zero.ends==TRUE) { dd[1,1]=dd[2*n2+1,2*n1+1]=0 }
+  return(apply(dd,2,rev))
+}
+s=scan("p12.sfs")
+n1=(s[1]-1)/2
+n2=(s[2]-1)/2
+ssfs=sfs2matrix(s[-c(1:2)],n1,n2)
+plot(raster(log(ssfs+0.1,10)))
+'''
 
 #=========== Fst: global, per site, and per gene
 
