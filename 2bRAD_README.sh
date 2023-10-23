@@ -444,7 +444,7 @@ GENOME_FASTA=cdh_alltags_cc.fasta
 GENOME_FASTA=mygenome.fasta
 
 # adjust setMinDepthInd as desired. Currently set to only look at sites with x10+ coverage.
-FILTERS='-minInd 1 -setMinDepthInd 10 -uniqueOnly 1 -minMapQ 30 -minQ 20'
+FILTERS='-minInd 1 -setMinDepthInd 10 -uniqueOnly 1 -minMapQ 30 -minQ 30'
 >hets
 >mybams.het
 for F in `cat bams`; do
