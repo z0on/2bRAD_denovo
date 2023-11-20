@@ -506,7 +506,7 @@ zcat pop0.mafs.gz | cut -f 1,2 | tail -n +2 | sort >pop0.sites
 zcat pop1.mafs.gz | cut -f 1,2 | tail -n +2 | sort >pop1.sites
 
 # collecting and indexing common sites:
-comm -12 pop0.sites pop1.sites | sort -k 1,1 -k 2,2n >allSites
+comm -12 pop0.sites pop1.sites | sort -V >allSites
 angsd sites index allSites
 
 # listing "regions"
