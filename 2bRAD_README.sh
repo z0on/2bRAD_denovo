@@ -482,54 +482,41 @@ ngsRelate -f freq -g myresult.glf.gz -n $NIND -z bams >relatedness
 # maxHetFreq - filters out lumped paralogs 
 # set minInd to 80% of all your individuals (depending on the results from quality control step)
 # If the goal is genome-wide diversity statistics, consider running this on a fraction of genome (a few Mb) - use angsd options -r or -rf
-FILTERS="-uniqueOnly 1 -remove_bads 1  -skipTriallelic 1 -minMapQ 30 -minQ 25 -doHWE 1 -sb_pval 1e-5 -hetbias_pval 1e-5 -minInd 18 -maxHetFreq 0.5"
-TODO="-doMajorMinor 1 -doMaf 1 -dosnpstat 1 -doPost 2 -doGeno 11 -doGlf 2"
-# ANGSD command:
-angsd -b bams -GL 1 -P 1 $FILTERS $TODO -out sfilt
 
-# individual heterozygosities (proportion of heterozygotes across SNPs that pass filters)
-Rscript heterozygosity_beagle.R sfilt.beagle.gz
-# this script (by Nathaniel Pope) outputs an R data bundle containing AFS (rows) for each individual (columns). The proportion of heterozygotes is the second row.
+# ---- stage 1: finding well-genotytped sites (both variable and invariable) that are shared between two populations.
+# we will run filtering command on each population, WITHOUT allele-frequency distorting filters (-minMaf and -snp_pval)
+
+# assuming we have text files `pop0.bams` and `ppop1.bams` listing bam files for two populations:
+# computing setting for the -minInd filter:
+export GenRate=0.75 # desired genotyping rate
+export N1=`wc -l pop0.bams | cut -f 1 -d " "`
+export N2=`wc -l pop1.bams | cut -f 1 -d " "`
+export MI1=`echo "($N1*$GenRate+0.5)/1" | bc`
+export MI2=`echo "($N2*$GenRate+0.5)/1" | bc`
+
+FILTERS='-uniqueOnly 1 -skipTriallelic 1 -minMapQ 30 -minQ 30 -maxHetFreq 0.5 -hetbias_pval 1e-3'
+# add `-sb_pval 1e-3` (strand bias) to FILTERS if you have 2bRAD, GBS, or WGS data. Other types of RAD only sequence one strand so -sb_pval filter would remove everything.
+export GENOME_REF="/work/01211/cmonstr/pipelines/amilV2_chroms.fasta" # reference to which the reads were mapped
+TODO="-doHWE 1 -doSaf 1 -doMajorMinor 1 -doMaf 1 -doPost 2 -dosnpstat 1 -doGeno 11 -doGlf 2 -anc $GENOME_REF -ref $GENOME_REF"
+angsd -b pop0.bams -r chr10 -GL 1 -p 4 -minInd $MI1 $FILTERS $TODO -out pop0
+angsd -b pop1.bams -r chr10 -GL 1 -P 4 -minInd $MI2 $FILTERS $TODO -out pop1
 
 # collecting and indexing filter-passing sites
-zcat sfilt.mafs.gz | cut -f 1,2 | tail -n +2 >allSites
+zcat pop0.mafs.gz | cut -f 1,2 | tail -n +2 | sort -k 1,1 -k 2,2n >pop0.sites
+zcat pop1.mafs.gz | cut -f 1,2 | tail -n +2 | sort -k 1,1 -k 2,2n >pop1.sites
+
+# collecting and indexing common sites:
+comm -12 pop0.sites pop1.sites >allSites
 angsd sites index allSites
 
-# estimating site frequency likelihoods for each population, also saving allele frequencies (for genome scan) 
-export GENOME_REF=mygenome.fasta
-TODO="-doSaf 1 -doMajorMinor 1 -doMaf 1 -doPost 1 -anc $GENOME_REF -ref $GENOME_REF"
-angsd -sites allSites -b pop0.bams -GL 1 -P 1 $TODO -out pop0
-angsd -sites allSites -b pop1.bams -GL 1 -P 1 $TODO -out pop1
-
-# generating per-population SFS
-realSFS pop0.saf.idx >pop0.sfs
-realSFS pop1.saf.idx >pop1.sfs
-
-# generating dadi-like posterior counts based on sfs priors
-realSFS dadi pop0.saf.idx pop1.saf.idx -sfs pop0.sfs -sfs pop1.sfs -ref $GENOME_REF -anc $GENOME_REF >dadiout
-
-# converting to dadi-snp format understood by dadi an Moments:
-# (numbers after the input file name are numbers of individuals sampled per population)
-realsfs2dadi.pl dadiout 20 20 >2pops_dadi.data
+# listing "regions"
+cat allSites | cut -f 1 | uniq >regions
 
 #===================== 2d AFS analysis using Moments
 
 # This part has it own github page now: https://github.com/z0on/AFS-analysis-with-moments
 # If you just want to generate nice "bagged" AFS for plotting:
 
-export GenRate=0.75 # desired genotyping rate
-export N1=`wc -l pop1.bams`
-export N2=`wc -l pop2.bams`
-export MI1=`echo "($N1*$GenRate+0.5)/1" | bc`
-export MI2=`echo "($N2*$GenRate+0.5)/1" | bc`
-FILTERS='-uniqueOnly 1 -skipTriallelic 1 -minMapQ 30 -minQ 30 -doHWE 1 -maxHetFreq 0.5 -hetbias_pval 1e-5'
-# add `-sb_pval 1e-5` (strand bias) to FILTERS if you have 2bRAD, GBS, or WGS data. Other types of RAD only sequence one strand so -sb_pval filter would remove everything.
-
-# calculating SFS in angsd - will do 5 bootstraps and then average them
-export GENOME_REF=mygenome.fasta # reference to which the reads were mapped
-TODO="-doSaf 1 -doMajorMinor 1 -doMaf 1 -doPost 1 -dosnpstat 1 -anc $GENOME_REF -ref $GENOME_REF"
-angsd -b pop1.bams -GL 1 -P 4 -minInd $MI1 $FILTERS $TODO -out pop1
-angsd -b pop2.bams -GL 1 -P 4 -minInd $MI2 $FILTERS $TODO -out pop2 
 realSFS pop1.saf.idx pop2.saf.idx -ref $GENOME_REF -anc $GENOME_REF -bootstrap 5 -P 1 -resample_chr 1 >p12
 
 # averaging bootstraps and writing downs single-line type 2dSFS:
