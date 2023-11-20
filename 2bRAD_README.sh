@@ -519,9 +519,14 @@ cat allSites | cut -f 1 | uniq >regions
 
 realSFS pop1.saf.idx pop2.saf.idx -ref $GENOME_REF -anc $GENOME_REF -bootstrap 5 -P 1 -resample_chr 1 >p12
 
-# averaging bootstraps and writing downs single-line type 2dSFS:
-SFSIZE="21 21" # 2N+1 for each population. In this case we assume that we have sampled 10 diploid individuals from each `pop1` and `pop2`.
-echo $SFSIZE >p12.sfs
+# computing SFS dimensions
+export N1=`wc -l pop0.bams | cut -f 1 -d " "`
+export N2=`wc -l pop1.bams | cut -f 1 -d " "`
+export NG1=`echo "($N1*2)+1" | bc`
+export NG2=`echo "($N2*2)+1" | bc`
+
+# averaging bootstraps, writing sfs file with header
+echo "$NG1 $NG2">p12.sfs
 cat p12 | awk '{for (i=1;i<=NF;i++){a[i]+=$i;}} END {for (i=1;i<=NF;i++){printf "%.3f", a[i]/NR; printf "\t"};printf "\n"}' >> p12.sfs
 
 # To plot and project this SFS to fewer samples, use python script 2dAFS.py from this location: 
