@@ -502,11 +502,11 @@ angsd -b pop0.bams -r chr10 -GL 1 -p 4 -minInd $MI1 $FILTERS $TODO -out pop0
 angsd -b pop1.bams -r chr10 -GL 1 -P 4 -minInd $MI2 $FILTERS $TODO -out pop1
 
 # collecting and indexing filter-passing sites
-zcat pop0.mafs.gz | cut -f 1,2 | tail -n +2 | sort -k 1,1 -k 2,2n >pop0.sites
-zcat pop1.mafs.gz | cut -f 1,2 | tail -n +2 | sort -k 1,1 -k 2,2n >pop1.sites
+zcat pop0.mafs.gz | cut -f 1,2 | tail -n +2 | sort >pop0.sites
+zcat pop1.mafs.gz | cut -f 1,2 | tail -n +2 | sort >pop1.sites
 
 # collecting and indexing common sites:
-comm -12 pop0.sites pop1.sites >allSites
+comm -12 pop0.sites pop1.sites | sort -k 1,1 -k 2,2n >allSites
 angsd sites index allSites
 
 # listing "regions"
