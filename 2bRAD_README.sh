@@ -496,10 +496,10 @@ export MI2=`echo "($N2*$GenRate+0.5)/1" | bc`
 
 FILTERS='-uniqueOnly 1 -skipTriallelic 1 -minMapQ 30 -minQ 30 -maxHetFreq 0.5 -hetbias_pval 1e-3'
 # add `-sb_pval 1e-3` (strand bias) to FILTERS if you have 2bRAD, GBS, or WGS data. Other types of RAD only sequence one strand so -sb_pval filter would remove everything.
-export GENOME_REF="/work/01211/cmonstr/pipelines/amilV2_chroms.fasta" # reference to which the reads were mapped
+GENOME_REF=mygenome.fasta # reference to which the reads were mapped
 TODO="-doHWE 1 -doSaf 1 -doMajorMinor 1 -doMaf 1 -doPost 2 -dosnpstat 1 -doGeno 11 -doGlf 2 -anc $GENOME_REF -ref $GENOME_REF"
-angsd -b pop0.bams -r chr10 -GL 1 -p 4 -minInd $MI1 $FILTERS $TODO -out pop0
-angsd -b pop1.bams -r chr10 -GL 1 -P 4 -minInd $MI2 $FILTERS $TODO -out pop1
+angsd -b pop0.bams -GL 1 -p 4 -minInd $MI1 $FILTERS $TODO -underFlowProtect 1 -out pop0
+angsd -b pop1.bams -GL 1 -P 4 -minInd $MI2 $FILTERS $TODO -underFlowProtect 1 -out pop1
 
 # collecting and indexing filter-passing sites
 zcat pop0.mafs.gz | cut -f 1,2 | tail -n +2 | sort >pop0.sites
@@ -512,12 +512,18 @@ angsd sites index allSites
 # listing "regions"
 cat allSites | cut -f 1 | uniq >regions
 
+# rerun saf generation for each pop using common sites
+GENOME_REF=mygenome.fasta
+angsd -b pop0.bams -rf regions -sites allSites -GL 1 -P 8 -doSaf 1 -anc $GENOME_REF -underFlowProtect 1 -out pop0s
+angsd -b pop1.bams -rf regions -sites allSites -GL 1 -P 8 -doSaf 1 -anc $GENOME_REF -underFlowProtect 1 -out pop1s
+
+
 #===================== 2d AFS analysis using Moments
 
 # This part has it own github page now: https://github.com/z0on/AFS-analysis-with-moments
 # If you just want to generate nice "bagged" AFS for plotting:
 
-realSFS pop1.saf.idx pop2.saf.idx -ref $GENOME_REF -anc $GENOME_REF -bootstrap 5 -P 1 -resample_chr 1 >p12
+realSFS pop0s.saf.idx pop1s.saf.idx -ref $GENOME_REF -anc $GENOME_REF -bootstrap 5 -P 1 -resample_chr 1 >p12
 
 # computing SFS dimensions
 export N1=`wc -l pop0.bams | cut -f 1 -d " "`
