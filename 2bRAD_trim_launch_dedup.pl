@@ -53,5 +53,5 @@ foreach $fqf (@fqs) {
 		$outname=$parts[$sampleid-1].".tr0";
 	}
 	else { $outname=$fqf.".tr0";}
-	print "trim2bRAD_2barcodes_dedup.pl input=$fqf site=\"$site\" adaptor=\"$adaptor\" sampleID=$sampleid deduplicate=1 bc=$bcod\n";
+	print "trim2bRAD_2barcodes_dedup.pl input=$fqf site=\"$site\" adaptor=\"$adaptor\" sampleID=$sampleid deduplicate=1 bc2=$bcod\n";
 }
