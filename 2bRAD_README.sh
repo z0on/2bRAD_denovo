@@ -421,6 +421,9 @@ TODO="-doMajorMinor 1 -doMaf 1 -doCounts 1 -makeMatrix 1 -doIBS 1 -doCov 1 -doGe
 # Starting angsd with -P the number of parallel processes. Funny but in many cases angsd runs faster on -P 1
 angsd -b bams -GL 1 $FILTERS $TODO -P 1 -out myresult
 
+# scp *ibsMat, *qopt and quality.txt files to laptop, use ibsMat_pca.R to plot hierarchical clustering tree and PCA
+
+
 # how many SNPs?
 NSITES=`zcat myresult.mafs.gz | wc -l`
 echo $NSITES
